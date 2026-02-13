@@ -272,6 +272,28 @@
               }
           };
 
+          const getGoogleDriveImageUrl = (url) => {
+              let fileId = null;
+              // Regex for standard share links: https://drive.google.com/file/d/FILE_ID/view?usp=sharing
+              const regex1 = /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/;
+              const match1 = url.match(regex1);
+              if (match1) {
+                  fileId = match1[1];
+              } else {
+                  // Regex for older share links: https://drive.google.com/open?id=FILE_ID
+                  const regex2 = /drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/;
+                  const match2 = url.match(regex2);
+                  if (match2) {
+                      fileId = match2[1];
+                  }
+              }
+
+              if (fileId) {
+                  return `https://drive.google.com/uc?export=view&id=${fileId}`;
+              }
+              return url; // Return original URL if it's not a Google Drive link or already a direct link
+          };
+
           const handleSubmit = (e) => {
               e.preventDefault();
               setError('');
@@ -280,15 +302,22 @@
                   setError('Please enter a valid YouTube URL for all songs in the playlist.');
                   return;
               }
-              if (photos.some(p => !p.url || !p.caption)) {
+              
+              const processedPhotos = photos.map(photo => ({
+                  ...photo,
+                  url: getGoogleDriveImageUrl(photo.url)
+              }));
+
+              if (processedPhotos.some(p => !p.url || !p.caption)) {
                   setError('Please ensure all photo fields are filled out.');
                   return;
               }
+
               if (bentoItems.some(item => !item.icon || !item.title || !item.text)) {
                   setError('Please ensure all "Adore About You" fields are filled out.');
                   return;
               }
-              onSubmit({ recipientName, welcomeMessage, birthdayMessage, bentoItems, galleryTitle, photos, galleryClosing, wishMessage, finalMessage, playlist: playlistWithIds, letter });
+              onSubmit({ recipientName, welcomeMessage, birthdayMessage, bentoItems, galleryTitle, photos: processedPhotos, galleryClosing, wishMessage, finalMessage, playlist: playlistWithIds, letter });
           };
 
           const inputStyles = "w-full bg-slate-800/50 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-400 focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-300 shadow-lg";
@@ -339,6 +368,7 @@
                       </details>
                       <details className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
                           <summary className="font-bold text-lg text-white cursor-pointer">Step 4: Customize Photo Gallery</summary>
+                          <p className="text-sm text-slate-400 mt-2">You can use direct image URLs or Google Drive share links for photos.</p>
                           <div className="space-y-4 mt-4">
                               {photos.map((photo, index) => (
                                   <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] items-end gap-4">
