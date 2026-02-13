@@ -117,20 +117,479 @@
   <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@^19.2.4",
+    "react": "https://esm.sh/react@19.2.4",
+    "react-dom/client": "https://esm.sh/react-dom@19.2.4/client",
+    "@google/genai": "https://esm.sh/@google/genai@1.41.0",
+    "three": "https://esm.sh/three@0.182.0",
+    "gsap": "https://esm.sh/gsap@3.14.2",
+    "canvas-confetti": "https://esm.sh/canvas-confetti@1.9.4",
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.41.0",
-    "three": "https://esm.sh/three@^0.182.0",
-    "gsap": "https://esm.sh/gsap@^3.14.2",
-    "canvas-confetti": "https://esm.sh/canvas-confetti@^1.9.4"
+    "react/": "https://esm.sh/react@^19.2.4/"
   }
 }
 </script>
+<!-- Babel for JSX & TS Transpilation -->
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
   <body>
     <div id="root"></div>
     <script src="https://www.youtube.com/iframe_api"></script>
-    <script type="module" src="/index.tsx"></script>
+    
+    <script type="text/babel" data-type="module">
+      import React, { useState, useEffect, useRef } from 'react';
+      import ReactDOM from 'react-dom/client';
+      import { GoogleGenAI, Type } from "@google/genai";
+      import * as THREE from 'three';
+      import gsap from 'gsap';
+      import confetti from 'canvas-confetti';
+
+      // --- Gemini Service ---
+      const generateBirthdayContent = async (name, relationship, memories) => {
+          if (!process.env.API_KEY) {
+              throw new Error("API_KEY environment variable not set");
+          }
+          const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+          const prompt = `
+              Based on the following information, generate heartfelt and romantic content for a special birthday website.
+              - Recipient's Name: ${name}
+              - My Relationship with them: ${relationship}
+              - Key Memories/Feelings: "${memories}"
+
+              The tone should be modern, deeply personal, and emotional. Adhere to the requested JSON schema. 
+              The letter should be a longer, heartfelt message (2-3 paragraphs) that expands on the feelings and memories provided.
+              The final message should be a short, impactful sign-off.
+          `;
+          try {
+              const response = await ai.models.generateContent({
+                  model: 'gemini-3-pro-preview',
+                  contents: prompt,
+                  config: {
+                      responseMimeType: "application/json",
+                      responseSchema: {
+                          type: Type.OBJECT,
+                          properties: {
+                              welcomeMessage: { type: Type.STRING, description: "A short, sweet welcome message. e.g., 'I built a little world for you...'" },
+                              birthdayMessage: { type: Type.STRING, description: "A message wishing them a happy birthday. e.g., 'Another year of you making the world brighter...'" },
+                              bentoItems: {
+                                  type: Type.ARRAY,
+                                  description: "Generate 3 to 5 distinct, positive attributes or 'reasons I adore you'.",
+                                  items: {
+                                      type: Type.OBJECT,
+                                      properties: {
+                                          icon: { type: Type.STRING, description: "A single, relevant emoji for the title." },
+                                          title: { type: Type.STRING, description: "A short title for the attribute (e.g., 'Your Radiant Spirit')." },
+                                          text: { type: Type.STRING, description: "A short sentence elaborating on the attribute." },
+                                      },
+                                      required: ["icon", "title", "text"]
+                                  }
+                              },
+                              wishMessage: { type: Type.STRING, description: "A forward-looking wish for their year ahead. e.g., 'May the next year bring you all the love...'" },
+                              letter: { type: Type.STRING, description: "A heartfelt letter to the recipient, 2-3 paragraphs long." },
+                              finalMessage: { type: Type.STRING, description: `A short, final birthday sign-off. e.g., 'Happy Birthday, ${name}! ❤️'"` },
+                          },
+                          required: ["welcomeMessage", "birthdayMessage", "bentoItems", "wishMessage", "letter", "finalMessage"]
+                      },
+                  }
+              });
+              const jsonText = response.text?.trim();
+              if (jsonText) {
+                  return JSON.parse(jsonText);
+              } else {
+                  throw new Error("AI returned an empty response.");
+              }
+          } catch (error) {
+              console.error("Error calling Gemini API:", error);
+              throw new Error("Failed to generate content from AI service. Please check your inputs.");
+          }
+      };
+
+      // --- SetupForm Component ---
+      const SetupForm = ({ onSubmit }) => {
+          const [relationship, setRelationship] = useState('');
+          const [memories, setMemories] = useState('');
+          const [recipientName, setRecipientName] = useState('Beautiful');
+          const [welcomeMessage, setWelcomeMessage] = useState("I built a little world for you...");
+          const [birthdayMessage, setBirthdayMessage] = useState("Another year of you making the world brighter.");
+          const [bentoItems, setBentoItems] = useState([
+              { icon: '✨', title: 'Your Unmatched Kindness', text: 'The genuine warmth you show to everyone is something truly rare and beautiful.' },
+              { icon: '😊', title: 'That Smile', text: "It's a work of art." },
+              { icon: '🌟', title: 'Your Radiant Spirit', text: 'Your passion for life is infectious.' }
+          ]);
+          const [galleryTitle, setGalleryTitle] = useState("A Gallery of Memories");
+          const [photos, setPhotos] = useState([
+              { url: 'https://i.ibb.co/6Z6XgCg/crush.webp', caption: 'Our favorite memory.' },
+              { url: 'https://images.unsplash.com/photo-1524250502761-1ac6f2e30d43?q=80&w=1888', caption: 'That day at the cafe.' }
+          ]);
+          const [galleryClosing, setGalleryClosing] = useState("Every moment with you feels like a scene...");
+          const [letter, setLetter] = useState("My Dearest Beautiful,\n\nOn your special day, I find myself reflecting on all the moments we've shared, big and small. Each one is a treasure, a testament to the incredible person you are. From your infectious laugh to the quiet way you listen, you make every day brighter.\n\nI hope the year ahead brings you as much joy and light as you bring to everyone around you. May all your dreams take flight.");
+          const [wishMessage, setWishMessage] = useState("May the next year bring you all the love...");
+          const [finalMessage, setFinalMessage] = useState("Happy Birthday! ❤️");
+          const [youtubeUrl, setYoutubeUrl] = useState('https://www.youtube.com/watch?v=jfKfPfyJRdk');
+          const [isLoading, setIsLoading] = useState(false);
+          const [error, setError] = useState('');
+
+          const getYouTubeId = (url) => {
+              const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+              const match = url.match(regExp);
+              return (match && match[2].length === 11) ? match[2] : null;
+          };
+
+          const handleAddPhoto = () => setPhotos([...photos, { url: '', caption: '' }]);
+          const handlePhotoChange = (index, field, value) => {
+              setPhotos(photos.map((p, i) => i === index ? { ...p, [field]: value } : p));
+          };
+          const handleRemovePhoto = (index) => setPhotos(photos.filter((_, i) => i !== index));
+
+          const handleAddBentoItem = () => setBentoItems([...bentoItems, { icon: '💖', title: '', text: '' }]);
+          const handleBentoItemChange = (index, field, value) => {
+              setBentoItems(bentoItems.map((item, i) => i === index ? { ...item, [field]: value } : item));
+          };
+          const handleRemoveBentoItem = (index) => setBentoItems(bentoItems.filter((_, i) => i !== index));
+
+          const handleGenerateContent = async () => {
+              if (!recipientName || !relationship || !memories) {
+                  setError('Please fill in Name, Relationship, and Memories to generate content.');
+                  return;
+              }
+              setIsLoading(true);
+              setError('');
+              try {
+                  const content = await generateBirthdayContent(recipientName, relationship, memories);
+                  setWelcomeMessage(content.welcomeMessage);
+                  setBirthdayMessage(content.birthdayMessage);
+                  setBentoItems(content.bentoItems);
+                  setWishMessage(content.wishMessage);
+                  setLetter(content.letter);
+                  setFinalMessage(content.finalMessage);
+              } catch (err) {
+                  setError(err.message);
+              } finally {
+                  setIsLoading(false);
+              }
+          };
+
+          const handleSubmit = (e) => {
+              e.preventDefault();
+              setError('');
+              const youtubeId = getYouTubeId(youtubeUrl);
+              if (!youtubeId) {
+                  setError('Please enter a valid YouTube URL.');
+                  return;
+              }
+              if (photos.some(p => !p.url || !p.caption)) {
+                  setError('Please ensure all photo fields are filled out.');
+                  return;
+              }
+              if (bentoItems.some(item => !item.icon || !item.title || !item.text)) {
+                  setError('Please ensure all "Adore About You" fields are filled out.');
+                  return;
+              }
+              onSubmit({ recipientName, welcomeMessage, birthdayMessage, bentoItems, galleryTitle, photos, galleryClosing, wishMessage, finalMessage, youtubeId, letter });
+          };
+
+          const inputStyles = "w-full bg-slate-800/50 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-400 focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-300 shadow-lg";
+          const labelStyles = "block mb-2 text-sm font-bold text-pink-300";
+
+          return (
+              <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 text-slate-200">
+                  <div id="aurora-bg">
+                      <div className="aurora-blur aurora-1 top-[10%] left-[15%]"></div><div className="aurora-blur aurora-2 top-[60%] left-[30%]"></div>
+                      <div className="aurora-blur aurora-3 top-[40%] left-[70%]"></div><div className="aurora-blur aurora-4 top-[80%] left-[5%]"></div>
+                  </div>
+                  <form onSubmit={handleSubmit} className="w-full max-w-3xl mx-auto card p-8 space-y-6 my-16">
+                      <div className="text-center">
+                          <h1 className="text-4xl font-display text-gradient">Birthday Site Generator</h1>
+                          <p className="text-pink-300 mt-2">Create a magical gift for someone special.</p>
+                      </div>
+                      <details className="bg-slate-900/50 p-4 rounded-lg border border-slate-700" open>
+                          <summary className="font-bold text-lg text-white cursor-pointer">Step 1: AI Content Generation</summary>
+                          <div className="grid md:grid-cols-2 gap-6 mt-4">
+                              <div><label htmlFor="recipientName" className={labelStyles}>To (Name):</label><input type="text" id="recipientName" value={recipientName} onChange={e => setRecipientName(e.target.value)} className={inputStyles} placeholder="e.g., Alex" /></div>
+                              <div><label htmlFor="relationship" className={labelStyles}>Your Relationship:</label><input type="text" id="relationship" value={relationship} onChange={e => setRelationship(e.target.value)} className={inputStyles} placeholder="e.g., My amazing girlfriend" /></div>
+                              <div className="md:col-span-2"><label htmlFor="memories" className={labelStyles}>Memories & Feelings for AI:</label><textarea id="memories" value={memories} onChange={e => setMemories(e.target.value)} className={`${inputStyles} h-20`} placeholder="A happy memory, what you admire..."></textarea></div>
+                          </div>
+                          <button type="button" onClick={handleGenerateContent} disabled={isLoading} className="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2">{isLoading ? 'Generating...' : '✨ Use AI to Write Messages'}</button>
+                      </details>
+                      <details className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                          <summary className="font-bold text-lg text-white cursor-pointer">Step 2: Customize Main Messages & Music</summary>
+                          <div className="space-y-4 mt-4">
+                              <div><label className={labelStyles}>Welcome Message</label><textarea value={welcomeMessage} onChange={e => setWelcomeMessage(e.target.value)} className={inputStyles} /></div>
+                              <div><label className={labelStyles}>Birthday Message</label><textarea value={birthdayMessage} onChange={e => setBirthdayMessage(e.target.value)} className={inputStyles} /></div>
+                              <div><label className={labelStyles}>Wish For Them</label><textarea value={wishMessage} onChange={e => setWishMessage(e.target.value)} className={inputStyles} /></div>
+                              <div><label className={labelStyles}>Final Message</label><input type="text" value={finalMessage} onChange={e => setFinalMessage(e.target.value)} className={inputStyles} /></div>
+                              <div><label className={labelStyles}>Background Music (YouTube URL)</label><input type="url" value={youtubeUrl} onChange={e => setYoutubeUrl(e.target.value)} className={inputStyles} /></div>
+                          </div>
+                      </details>
+                      <details className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                          <summary className="font-bold text-lg text-white cursor-pointer">Step 3: Customize "Adore About You" Section</summary>
+                          <div className="space-y-4 mt-4">
+                              {bentoItems.map((item, index) => (
+                                  <div key={index} className="grid grid-cols-[auto_1fr_1fr_auto] items-end gap-2 p-2 rounded-md bg-slate-800/50">
+                                      <div><label className={labelStyles}>Icon</label><input type="text" value={item.icon} onChange={e => handleBentoItemChange(index, 'icon', e.target.value)} className={`${inputStyles} w-16 text-center`} /></div>
+                                      <div className="flex-grow"><label className={labelStyles}>Title</label><input type="text" value={item.title} onChange={e => handleBentoItemChange(index, 'title', e.target.value)} className={inputStyles} /></div>
+                                      <div className="flex-grow"><label className={labelStyles}>Text</label><input type="text" value={item.text} onChange={e => handleBentoItemChange(index, 'text', e.target.value)} className={inputStyles} /></div>
+                                      <button type="button" onClick={() => handleRemoveBentoItem(index)} className="bg-red-600 hover:bg-red-700 text-white font-bold p-3 rounded-lg h-12 w-12">-</button>
+                                  </div>
+                              ))}
+                          </div>
+                          <button type="button" onClick={handleAddBentoItem} className="w-full mt-4 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300">+</button>
+                      </details>
+                      <details className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                          <summary className="font-bold text-lg text-white cursor-pointer">Step 4: Customize Photo Gallery</summary>
+                          <div className="space-y-4 mt-4">
+                              {photos.map((photo, index) => (
+                                  <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] items-end gap-4">
+                                      <div><label className={labelStyles}>Photo #{index + 1} URL</label><input type="url" value={photo.url} onChange={e => handlePhotoChange(index, 'url', e.target.value)} className={inputStyles} placeholder="https://..." /></div>
+                                      <div><label className={labelStyles}>Caption</label><input type="text" value={photo.caption} onChange={e => handlePhotoChange(index, 'caption', e.target.value)} className={inputStyles} placeholder="A short caption" /></div>
+                                      <button type="button" onClick={() => handleRemovePhoto(index)} className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-3 rounded-lg h-12 w-full md:w-auto">-</button>
+                                  </div>
+                              ))}
+                          </div>
+                          <button type="button" onClick={handleAddPhoto} className="w-full mt-4 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300">+</button>
+                      </details>
+                      <details className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                          <summary className="font-bold text-lg text-white cursor-pointer">Step 5: Customize The Letter</summary>
+                          <div className="space-y-4 mt-4">
+                              <div>
+                                  <label className={labelStyles}>Your Letter</label>
+                                  <textarea value={letter} onChange={e => setLetter(e.target.value)} className={`${inputStyles} h-48`} />
+                              </div>
+                          </div>
+                      </details>
+                      {error && <div className="bg-red-900/50 text-red-300 p-3 rounded-lg text-center">{error}</div>}
+                      <button type="submit" className="w-full btn-primary text-white font-bold py-4 px-4 rounded-lg text-xl">
+                          Create Birthday Website
+                      </button>
+                  </form>
+              </div>
+          );
+      };
+
+      // --- BirthdayWebsite Component ---
+      const BirthdayWebsite = ({ config, onStartOver }) => {
+          const canvasRef = useRef(null);
+          const objectsRef = useRef([]);
+          const animationFrameId = useRef(null);
+          const [currentStep, setCurrentStep] = useState(1);
+          const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+          const [isPlayerReady, setIsPlayerReady] = useState(false);
+          const playerRef = useRef(null);
+          const TOTAL_STEPS = 6;
+
+          useEffect(() => {
+              const initPlayer = () => {
+                  if (playerRef.current) playerRef.current.destroy();
+                  playerRef.current = new window.YT.Player('youtube-player', {
+                      height: '0', width: '0', videoId: config.youtubeId,
+                      playerVars: { autoplay: 0, controls: 0, loop: 1, playlist: config.youtubeId },
+                      events: { 'onReady': (event) => { event.target.setVolume(30); setIsPlayerReady(true); } }
+                  });
+              };
+              if (window.YT?.Player) { initPlayer(); } else { window.onYouTubeIframeAPIReady = initPlayer; }
+
+              const canvas = canvasRef.current;
+              if (!canvas) return;
+              const scene = new THREE.Scene();
+              const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+              camera.position.z = 5;
+              const renderer = new THREE.WebGLRenderer({ canvas, alpha: true });
+              renderer.setSize(window.innerWidth, window.innerHeight);
+              renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+              scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+              const dirLight = new THREE.DirectionalLight(0xffffff, 2);
+              dirLight.position.set(5, 5, 5);
+              scene.add(dirLight);
+              const heartShape = new THREE.Shape().moveTo(25, 25).bezierCurveTo(25, 25, 20, 0, 0, 0).bezierCurveTo(-30, 0, -30, 35, -30, 35).bezierCurveTo(-30, 55, -10, 77, 25, 95).bezierCurveTo(60, 77, 80, 55, 80, 35).bezierCurveTo(80, 35, 80, 0, 50, 0).bezierCurveTo(35, 0, 25, 25, 25, 25);
+              const heartGeom = new THREE.ExtrudeGeometry(heartShape, { depth: 8, bevelEnabled: true, bevelSegments: 2, steps: 2, bevelSize: 1, bevelThickness: 1 }).scale(0.02, 0.02, 0.02).center();
+              const heartMaterial = new THREE.MeshStandardMaterial({ color: 0xec4899, roughness: 0.3, metalness: 0.6, transparent: true });
+              objectsRef.current = [];
+              for (let i = 0; i < 25; i++) {
+                  const mesh = new THREE.Mesh(heartGeom, heartMaterial.clone());
+                  const x = (Math.random() - 0.5) * 20;
+                  const y = (Math.random() - 0.5) * 20;
+                  const z = (Math.random() - 0.5) * 10;
+                  mesh.position.set(x, y, z);
+                  mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+                  mesh.scale.setScalar(Math.random() * 0.5 + 0.3);
+                  mesh.userData = { sinOffset: Math.random() * Math.PI * 2, speed: Math.random() * 0.3 + 0.1, initialPosition: new THREE.Vector3(x, y, z) };
+                  scene.add(mesh);
+                  objectsRef.current.push(mesh);
+              }
+              const animate = () => {
+                  animationFrameId.current = requestAnimationFrame(animate);
+                  const time = Date.now() * 0.0005;
+                  objectsRef.current.forEach(obj => { obj.rotation.y += Math.sin(time * obj.userData.speed + obj.userData.sinOffset) * 0.01; });
+                  renderer.render(scene, camera);
+              };
+              animate();
+              const handleResize = () => {
+                  camera.aspect = window.innerWidth / window.innerHeight;
+                  camera.updateProjectionMatrix();
+                  renderer.setSize(window.innerWidth, window.innerHeight);
+              };
+              window.addEventListener('resize', handleResize);
+              gsap.from('#step-1', { opacity: 0, scale: 1.1, duration: 1, ease: 'power3.out', delay: 0.5 });
+              return () => {
+                  window.removeEventListener('resize', handleResize);
+                  if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
+                  playerRef.current?.destroy();
+              };
+          }, [config.youtubeId]);
+
+          const toggleMusic = () => {
+              if (!isPlayerReady || !playerRef.current || typeof playerRef.current.getPlayerState !== 'function') return;
+              const playerState = playerRef.current.getPlayerState();
+              if (playerState === 1) { playerRef.current.pauseVideo(); setIsMusicPlaying(false); } else { playerRef.current.playVideo(); setIsMusicPlaying(true); }
+          };
+          const handleBegin = () => {
+              if (isPlayerReady && playerRef.current?.playVideo) { playerRef.current.playVideo(); setIsMusicPlaying(true); }
+              goToStep(2);
+          };
+
+          const goToStep = (stepNumber) => {
+              const currentStepEl = document.getElementById(`step-${currentStep}`);
+              const nextStepEl = document.getElementById(`step-${stepNumber}`);
+              if (!currentStepEl || !nextStepEl || currentStep === stepNumber) return;
+              gsap.timeline()
+                  .to(currentStepEl, { opacity: 0, scale: 0.9, duration: 0.4, ease: 'power3.in', onComplete: () => currentStepEl.style.display = 'none' })
+                  .set(nextStepEl, { opacity: 0, scale: 1.1, display: 'flex' })
+                  .to(nextStepEl, { opacity: 1, scale: 1, duration: 0.6, ease: 'power3.out' }, ">-0.2");
+              setCurrentStep(stepNumber);
+          };
+
+          const handleGoHome = () => {
+              objectsRef.current.forEach(obj => {
+                  gsap.killTweensOf(obj.position);
+                  gsap.killTweensOf(obj.material);
+                  gsap.to(obj.position, { x: obj.userData.initialPosition.x, y: obj.userData.initialPosition.y, z: obj.userData.initialPosition.z, duration: 1, ease: 'power2.out' });
+                  gsap.to(obj.material, { opacity: 1, duration: 1 });
+              });
+              goToStep(1);
+          };
+
+          const handleCelebration = () => {
+              gsap.killTweensOf(objectsRef.current.map(o => o.position));
+              gsap.killTweensOf(objectsRef.current.map(o => o.material));
+              objectsRef.current.forEach(obj => { obj.position.copy(obj.userData.initialPosition); obj.material.opacity = 1; });
+              const duration = 5 * 1000, end = Date.now() + duration;
+              (function frame() {
+                  confetti({ particleCount: 2, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#ec4899', '#f87171', '#a78bfa', '#ffffff'] });
+                  confetti({ particleCount: 2, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#ec4899', '#f87171', '#a78bfa', '#ffffff'] });
+                  if (Date.now() < end) requestAnimationFrame(frame);
+              }());
+              objectsRef.current.forEach(obj => {
+                  gsap.to(obj.position, { y: obj.position.y + (Math.random() > 0.5 ? 15 : -15), x: obj.position.x + (Math.random() > 0.5 ? 15 : -15), z: 10, duration: 5, ease: 'power2.in' });
+                  gsap.to(obj.material, { opacity: 0, duration: 5, ease: 'power2.in' });
+              });
+          };
+
+          useEffect(() => {
+              const galleryWrapper = document.getElementById('photo-gallery-wrapper');
+              if (!galleryWrapper) return;
+              const gallery = galleryWrapper.querySelector('.photo-gallery');
+              const polaroids = galleryWrapper.querySelectorAll('.polaroid');
+              if (!gallery || !polaroids) return;
+
+              const onMove = (e) => {
+                  const rect = galleryWrapper.getBoundingClientRect();
+                  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+                  gsap.to(polaroids, { rotateX: gsap.utils.mapRange(0, rect.height, 10, -10, y), rotateY: gsap.utils.mapRange(0, rect.width, -10, 10, x), duration: 0.5, ease: 'power1.out' });
+              };
+              const onLeave = () => gsap.to(polaroids, { rotateX: 0, rotateY: 0, duration: 0.5, ease: 'power1.out' });
+              const onWheel = (e) => { if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; e.preventDefault(); gallery.scrollLeft += e.deltaY; };
+
+              galleryWrapper.addEventListener('mousemove', onMove);
+              galleryWrapper.addEventListener('mouseleave', onLeave);
+              gallery.addEventListener('wheel', onWheel, { passive: false });
+              return () => {
+                  galleryWrapper.removeEventListener('mousemove', onMove);
+                  galleryWrapper.removeEventListener('mouseleave', onLeave);
+                  gallery.removeEventListener('wheel', onWheel);
+              };
+          }, [currentStep]);
+
+          const cardStyles = "step absolute inset-0 m-auto w-full card p-6 md:p-8 flex flex-col items-center justify-start gap-4 text-center max-h-[90vh] overflow-y-auto pt-20 pb-8";
+
+          return (
+              <div className="w-full h-screen overflow-hidden">
+                  <div id="aurora-bg"><div className="aurora-blur aurora-1 top-[10%] left-[15%]"></div><div className="aurora-blur aurora-2 top-[60%] left-[30%]"></div><div className="aurora-blur aurora-3 top-[40%] left-[70%]"></div><div className="aurora-blur aurora-4 top-[80%] left-[5%]"></div></div>
+                  <canvas ref={canvasRef} id="three-canvas" className="fixed top-0 left-0 w-full h-full -z-10"></canvas>
+                  <main className="relative z-10 w-full h-screen flex flex-col items-center justify-center p-4">
+                      <div className="fixed top-5 w-11/12 max-w-md h-2.5 rounded-full p-0.5 bg-slate-900/30 backdrop-blur-sm"><div className="h-1.5 rounded-full bg-gradient-to-r from-pink-500 to-red-500 transition-all duration-500" style={{ width: `${((currentStep - 1) / (TOTAL_STEPS - 1)) * 100}%` }}></div></div>
+                      <div className="fixed top-12 left-5 z-20 flex gap-2">
+                          <button onClick={handleGoHome} title="Home" className="w-12 h-12 rounded-full flex items-center justify-center text-white bg-slate-800/70 backdrop-blur-sm border border-slate-600 hover:bg-slate-700/70 transition-colors"><i className="fas fa-home"></i></button>
+                          <button onClick={onStartOver} title="Create Another Wish" className="w-12 h-12 rounded-full flex items-center justify-center text-white bg-slate-800/70 backdrop-blur-sm border border-slate-600 hover:bg-slate-700/70 transition-colors"><i className="fas fa-plus"></i></button>
+                      </div>
+                      <button onClick={toggleMusic} className="fixed top-12 right-5 z-20 w-10 h-10 rounded-full flex items-center justify-center text-pink-300 bg-slate-900/30 backdrop-blur-sm hover:bg-slate-900/50 transition-colors">{isMusicPlaying ? '❚❚' : '▶'}</button>
+                      <div className="relative w-full max-w-2xl h-full flex items-center justify-center">
+                          <div id="step-1" className={`${cardStyles} gap-6 pb-12`} style={{ display: currentStep === 1 ? 'flex' : 'none', justifyContent: 'center' }}><div className="text-7xl animate-pulse">❤️</div><h1 className="text-5xl font-display text-gradient">Hey {config.recipientName},</h1><p>{config.welcomeMessage}</p><button onClick={handleBegin} className="btn-primary rounded-full px-8 py-3 font-bold mt-4">Let's Begin</button></div>
+                          <div id="step-2" className={cardStyles} style={{ display: currentStep === 2 ? 'flex' : 'none', justifyContent: 'center' }}><div className="text-7xl">🎉</div><h1 className="text-5xl font-display text-gradient">Happy Birthday!</h1><p>{config.birthdayMessage}</p><button onClick={() => goToStep(3)} className="btn-primary rounded-full px-8 py-3 font-bold mt-4">There's more...</button></div>
+                          <div id="step-3" className={cardStyles} style={{ display: currentStep === 3 ? 'flex' : 'none' }}>
+                              <h2 className="text-4xl font-display text-gradient text-center">A Few Things I Adore About You</h2>
+                              <div className="bento-grid w-full mt-4">
+                                  {config.bentoItems.map((item, i) => {
+                                      const totalItems = config.bentoItems.length;
+                                      const isLastOnOdd = totalItems % 2 !== 0 && i === totalItems - 1;
+                                      return (<div key={item.title} className={`bento-item ${isLastOnOdd ? 'col-span-2' : ''}`}>
+                                          <h3 className="font-bold text-lg text-white mb-2">{item.icon} {item.title}</h3>
+                                          <p className="text-sm opacity-80">{item.text}</p>
+                                      </div>);
+                                  })}
+                              </div>
+                              <button onClick={() => goToStep(4)} className="btn-primary rounded-full px-8 py-3 font-bold mt-6 self-center">Remember this?</button>
+                          </div>
+                          <div id="step-4" className={cardStyles} style={{ display: currentStep === 4 ? 'flex' : 'none' }}>
+                              <h2 className="text-4xl font-display text-gradient text-center">{config.galleryTitle}</h2>
+                              <div id="photo-gallery-wrapper" className="w-full relative"><div className="photo-gallery flex gap-8 overflow-x-auto p-4 snap-x snap-mandatory scroll-smooth">{config.photos.map((photo, i) => <figure key={i} className={`polaroid w-64 h-auto flex-shrink-0 snap-center`} style={{transform: `rotate(${(i%2===0? -1:1) * (2+i)}deg)`}}><img src={photo.url} alt={photo.caption} className="w-full h-auto object-cover" /><figcaption>{photo.caption}</figcaption></figure>)}</div></div>
+                              <p className="text-center italic mt-4">{config.galleryClosing}</p>
+                              <button onClick={() => goToStep(5)} className="btn-primary rounded-full px-8 py-3 font-bold mt-4">Read my letter to you</button>
+                          </div>
+                          <div id="step-5" className={cardStyles} style={{ display: currentStep === 5 ? 'flex' : 'none' }}>
+                              <h2 className="text-4xl font-display text-gradient text-center">A Letter For You</h2>
+                              <div className="w-full text-left overflow-y-auto max-h-[50vh] prose prose-invert prose-p:text-slate-300 mt-4 px-4 whitespace-pre-wrap">{config.letter}</div>
+                              <button onClick={() => goToStep(6)} className="btn-primary rounded-full px-8 py-3 font-bold mt-6 self-center">One last thing...</button>
+                          </div>
+                          <div id="step-6" className={cardStyles} style={{ display: currentStep === 6 ? 'flex' : 'none', justifyContent: 'center' }}>
+                              <div className="text-7xl">🎂</div>
+                              <h1 className="text-5xl font-display text-gradient">My Wish For You</h1>
+                              <p>{config.wishMessage}</p>
+                              <div className="h-10 mt-4"><h2 className="text-3xl text-gradient font-display">{config.finalMessage}</h2></div>
+                              <button id="celebrate-btn" onClick={handleCelebration} className="btn-primary rounded-full px-8 py-3 font-bold">Celebrate!</button>
+                          </div>
+                      </div>
+                  </main>
+                  <div id="youtube-player-container" className="fixed -z-50 top-[-9999px] left-[-9999px]"><div id="youtube-player"></div></div>
+              </div>
+          );
+      };
+
+      // --- App Component ---
+      const App = () => {
+          const [config, setConfig] = useState(null);
+          const handleCreate = (newConfig) => { setConfig(newConfig); };
+          const handleStartOver = () => { setConfig(null); };
+
+          if (config) {
+              return <BirthdayWebsite config={config} onStartOver={handleStartOver} />;
+          }
+          return (
+              <div className="w-full min-h-screen bg-[#0c0a09]">
+                  <SetupForm onSubmit={handleCreate} />
+              </div>
+          );
+      };
+
+      // --- React DOM Render ---
+      const rootElement = document.getElementById('root');
+      if (!rootElement) {
+          throw new Error("Could not find root element to mount to");
+      }
+      const root = ReactDOM.createRoot(rootElement);
+      root.render(
+          <React.StrictMode>
+              <App />
+          </React.StrictMode>
+      );
+    </script>
   </body>
 </html>
