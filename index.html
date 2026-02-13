@@ -602,8 +602,51 @@
       // --- App Component ---
       const App = () => {
           const [config, setConfig] = useState(null);
-          const handleCreate = (newConfig) => { setConfig(newConfig); };
-          const handleStartOver = () => { setConfig(null); };
+
+          useEffect(() => {
+              const handleHashChange = () => {
+                  const hash = window.location.hash.slice(1);
+                  if (hash.startsWith('data=')) {
+                      try {
+                          const encodedData = hash.substring(5);
+                          // Reverse the encoding process to correctly handle Unicode characters.
+                          const base64Decoded = atob(decodeURIComponent(encodedData));
+                          const jsonString = decodeURIComponent(escape(base64Decoded));
+                          const parsedConfig = JSON.parse(jsonString);
+                          setConfig(parsedConfig);
+                      } catch (e) {
+                          console.error("Failed to parse config from URL hash", e);
+                          window.location.hash = ''; // Clear invalid hash
+                          setConfig(null);
+                      }
+                  } else {
+                      setConfig(null);
+                  }
+              };
+
+              handleHashChange(); // Check hash on initial load
+              window.addEventListener('hashchange', handleHashChange); // Listen for changes
+
+              return () => {
+                  window.removeEventListener('hashchange', handleHashChange); // Cleanup listener
+              };
+          }, []); // Empty dependency array ensures this runs only once on mount
+
+          const handleCreate = (newConfig) => {
+              try {
+                  const jsonString = JSON.stringify(newConfig);
+                  // Handle Unicode characters by converting the string to a format btoa can handle.
+                  const safeStringForBtoA = unescape(encodeURIComponent(jsonString));
+                  const encodedData = btoa(safeStringForBtoA);
+                  window.location.hash = `data=${encodeURIComponent(encodedData)}`;
+              } catch (e) {
+                  console.error("Error creating shareable link:", e);
+              }
+          };
+
+          const handleStartOver = () => {
+              window.location.hash = ''; // Clear hash to return to form
+          };
 
           if (config) {
               return <BirthdayWebsite config={config} onStartOver={handleStartOver} />;
@@ -629,3 +672,4 @@
     </script>
   </body>
 </html>
+```
