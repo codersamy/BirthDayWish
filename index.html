@@ -399,22 +399,47 @@
               const dirLight = new THREE.DirectionalLight(0xffffff, 2);
               dirLight.position.set(5, 5, 5);
               scene.add(dirLight);
+              
               const heartShape = new THREE.Shape().moveTo(25, 25).bezierCurveTo(25, 25, 20, 0, 0, 0).bezierCurveTo(-30, 0, -30, 35, -30, 35).bezierCurveTo(-30, 55, -10, 77, 25, 95).bezierCurveTo(60, 77, 80, 55, 80, 35).bezierCurveTo(80, 35, 80, 0, 50, 0).bezierCurveTo(35, 0, 25, 25, 25, 25);
               const heartGeom = new THREE.ExtrudeGeometry(heartShape, { depth: 8, bevelEnabled: true, bevelSegments: 2, steps: 2, bevelSize: 1, bevelThickness: 1 }).scale(0.02, 0.02, 0.02).center();
               const heartMaterial = new THREE.MeshStandardMaterial({ color: 0xec4899, roughness: 0.3, metalness: 0.6, transparent: true });
+              
               objectsRef.current = [];
               for (let i = 0; i < 25; i++) {
-                  const mesh = new THREE.Mesh(heartGeom, heartMaterial.clone());
                   const x = (Math.random() - 0.5) * 20;
                   const y = (Math.random() - 0.5) * 20;
                   const z = (Math.random() - 0.5) * 10;
-                  mesh.position.set(x, y, z);
-                  mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-                  mesh.scale.setScalar(Math.random() * 0.5 + 0.3);
-                  mesh.userData = { sinOffset: Math.random() * Math.PI * 2, speed: Math.random() * 0.3 + 0.1, initialPosition: new THREE.Vector3(x, y, z) };
-                  scene.add(mesh);
-                  objectsRef.current.push(mesh);
+                  const userData = { sinOffset: Math.random() * Math.PI * 2, speed: Math.random() * 0.3 + 0.1, initialPosition: new THREE.Vector3(x, y, z) };
+                  let obj;
+
+                  if (Math.random() > 0.4) { // 60% chance of heart
+                      obj = new THREE.Mesh(heartGeom, heartMaterial.clone());
+                      userData.isGift = false;
+                  } else { // 40% chance of gift
+                      const giftGroup = new THREE.Group();
+                      const giftColors = [0xa78bfa, 0x7dd3fc, 0x60a5fa];
+                      const ribbonColor = 0xf1f5f9;
+                      const boxMaterial = new THREE.MeshStandardMaterial({ color: giftColors[Math.floor(Math.random() * giftColors.length)], roughness: 0.3, metalness: 0.6, transparent: true });
+                      const ribbonMaterial = new THREE.MeshStandardMaterial({ color: ribbonColor, roughness: 0.3, metalness: 0.6, transparent: true });
+                      const boxGeom = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+                      const boxMesh = new THREE.Mesh(boxGeom, boxMaterial);
+                      const ribbon1Geom = new THREE.BoxGeometry(1.6, 0.3, 1.6);
+                      const ribbon1Mesh = new THREE.Mesh(ribbon1Geom, ribbonMaterial);
+                      const ribbon2Geom = new THREE.BoxGeometry(0.3, 1.6, 1.6);
+                      const ribbon2Mesh = new THREE.Mesh(ribbon2Geom, ribbonMaterial);
+                      giftGroup.add(boxMesh, ribbon1Mesh, ribbon2Mesh);
+                      obj = giftGroup;
+                      userData.isGift = true;
+                  }
+
+                  obj.position.set(x, y, z);
+                  obj.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+                  obj.scale.setScalar(Math.random() * 0.5 + 0.3);
+                  obj.userData = userData;
+                  scene.add(obj);
+                  objectsRef.current.push(obj);
               }
+
               const animate = () => {
                   animationFrameId.current = requestAnimationFrame(animate);
                   const time = Date.now() * 0.0005;
@@ -460,26 +485,37 @@
           const handleGoHome = () => {
               objectsRef.current.forEach(obj => {
                   gsap.killTweensOf(obj.position);
-                  gsap.killTweensOf(obj.material);
                   gsap.to(obj.position, { x: obj.userData.initialPosition.x, y: obj.userData.initialPosition.y, z: obj.userData.initialPosition.z, duration: 1, ease: 'power2.out' });
-                  gsap.to(obj.material, { opacity: 1, duration: 1 });
+                  if (obj.userData.isGift) {
+                      obj.children.forEach(child => {
+                          gsap.killTweensOf(child.material);
+                          gsap.to(child.material, { opacity: 1, duration: 1 });
+                      });
+                  } else {
+                      gsap.killTweensOf(obj.material);
+                      gsap.to(obj.material, { opacity: 1, duration: 1 });
+                  }
               });
               goToStep(1);
           };
 
           const handleCelebration = () => {
-              gsap.killTweensOf(objectsRef.current.map(o => o.position));
-              gsap.killTweensOf(objectsRef.current.map(o => o.material));
-              objectsRef.current.forEach(obj => { obj.position.copy(obj.userData.initialPosition); obj.material.opacity = 1; });
               const duration = 5 * 1000, end = Date.now() + duration;
               (function frame() {
                   confetti({ particleCount: 2, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#ec4899', '#f87171', '#a78bfa', '#ffffff'] });
                   confetti({ particleCount: 2, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#ec4899', '#f87171', '#a78bfa', '#ffffff'] });
                   if (Date.now() < end) requestAnimationFrame(frame);
               }());
+              
               objectsRef.current.forEach(obj => {
                   gsap.to(obj.position, { y: obj.position.y + (Math.random() > 0.5 ? 15 : -15), x: obj.position.x + (Math.random() > 0.5 ? 15 : -15), z: 10, duration: 5, ease: 'power2.in' });
-                  gsap.to(obj.material, { opacity: 0, duration: 5, ease: 'power2.in' });
+                  if (obj.userData.isGift) {
+                      obj.children.forEach(child => {
+                           gsap.to(child.material, { opacity: 0, duration: 5, ease: 'power2.in' });
+                      });
+                  } else {
+                      gsap.to(obj.material, { opacity: 0, duration: 5, ease: 'power2.in' });
+                  }
               });
           };
 
