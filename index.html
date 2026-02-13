@@ -1,0 +1,136 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Birthday Wish Generator</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Manrope:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <style>
+      :root {
+        --bg-color: #0c0a09;
+        --card-bg-color: rgba(15, 23, 42, 1);
+      }
+      body {
+        font-family: 'Manrope', sans-serif;
+        background-color: var(--bg-color);
+        color: #e2e8f0;
+        overflow-x: hidden;
+      }
+      .font-display {
+        font-family: 'Playfair Display', serif;
+      }
+
+      /* Aurora Background */
+      #aurora-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; overflow: hidden; }
+      .aurora-blur { filter: blur(100px); position: absolute; border-radius: 50%; }
+      .aurora-1 { background-color: hsla(333, 70%, 55%, 0.3); width: 400px; height: 400px; animation: move1 20s infinite alternate; }
+      .aurora-2 { background-color: hsla(282, 82%, 54%, 0.2); width: 500px; height: 500px; animation: move2 25s infinite alternate; }
+      .aurora-3 { background-color: hsla(210, 89%, 60%, 0.2); width: 350px; height: 350px; animation: move3 18s infinite alternate; }
+      .aurora-4 { background-color: hsla(35, 90%, 60%, 0.2); width: 450px; height: 450px; animation: move4 22s infinite alternate; }
+      @keyframes move1 { from { transform: translate(-20%, -10%) rotate(0deg); } to { transform: translate(20%, 10%) rotate(30deg); } }
+      @keyframes move2 { from { transform: translate(10%, 20%) scale(1); } to { transform: translate(-10%, -20%) scale(1.2); } }
+      @keyframes move3 { from { transform: translate(-15%, 15%) rotate(45deg); } to { transform: translate(15%, -15%) rotate(-45deg); } }
+      @keyframes move4 { from { transform: translate(20%, -20%); } to { transform: translate(-20%, 20%); } }
+
+      /* Glassmorphism Card */
+      .card {
+        background-color: rgba(15, 23, 42, 0.4);
+        backdrop-filter: blur(24px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 1.5rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      }
+
+      /* UI Elements */
+      .text-gradient {
+        background: linear-gradient(to right, #f9a8d4, #ffffff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .btn-primary {
+        background: linear-gradient(to right, #ec4899, #ef4444);
+        box-shadow: 0 0 20px rgba(236, 72, 153, 0.5);
+        transition: all 0.3s ease;
+      }
+      .btn-primary:hover {
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: 0 0 30px rgba(236, 72, 153, 0.8);
+      }
+      .btn-primary:active { transform: translateY(0px) scale(1); }
+      
+      /* Bento Grid */
+      .bento-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+      .bento-item { 
+        background-color: rgba(255, 255, 255, 0.05); 
+        border-radius: 1rem; 
+        padding: 1.5rem; 
+        transition: transform 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      .bento-item:hover { transform: translateY(-5px); }
+      .bento-item.col-span-2 { grid-column: span 2 / span 2; }
+
+      /* Photo Gallery */
+      .photo-gallery { -ms-overflow-style: none; scrollbar-width: none; }
+      .photo-gallery::-webkit-scrollbar { display: none; }
+      .polaroid {
+        background: white; padding: 1rem 1rem 3.5rem 1rem; box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        transition: transform 0.3s ease; transform-style: preserve-3d;
+      }
+      .polaroid figcaption {
+        position: absolute; bottom: 1rem; left: 1rem; right: 1rem;
+        text-align: center; color: #333; font-family: 'Playfair Display', serif;
+      }
+      #photo-gallery-wrapper::before,
+      #photo-gallery-wrapper::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 3rem;
+        z-index: 2;
+        pointer-events: none;
+      }
+      #photo-gallery-wrapper::before {
+        left: 0;
+        background: linear-gradient(to right, var(--card-bg-color), transparent);
+      }
+      #photo-gallery-wrapper::after {
+        right: 0;
+        background: linear-gradient(to left, var(--card-bg-color), transparent);
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.4",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.41.0",
+    "three": "https://esm.sh/three@^0.182.0",
+    "gsap": "https://esm.sh/gsap@^3.14.2",
+    "canvas-confetti": "https://esm.sh/canvas-confetti@^1.9.4"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
