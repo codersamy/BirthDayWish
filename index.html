@@ -58,6 +58,7 @@
         background: linear-gradient(to right, #f9a8d4, #ffffff);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
       }
       .btn-primary {
         background: linear-gradient(to right, #ec4899, #ef4444);
@@ -220,11 +221,14 @@
               { url: 'https://i.ibb.co/6Z6XgCg/crush.webp', caption: 'Our favorite memory.' },
               { url: 'https://images.unsplash.com/photo-1524250502761-1ac6f2e30d43?q=80&w=1888', caption: 'That day at the cafe.' }
           ]);
+          const [playlist, setPlaylist] = useState([
+              { url: 'https://www.youtube.com/watch?v=jfKfPfyJRdk', title: 'Lofi Girl - beats to relax/study to' },
+              { url: 'https://www.youtube.com/watch?v=rUxyKA_-grg', title: 'a playlist of songs that make you feel like the main character' }
+          ]);
           const [galleryClosing, setGalleryClosing] = useState("Every moment with you feels like a scene...");
           const [letter, setLetter] = useState("My Dearest Beautiful,\n\nOn your special day, I find myself reflecting on all the moments we've shared, big and small. Each one is a treasure, a testament to the incredible person you are. From your infectious laugh to the quiet way you listen, you make every day brighter.\n\nI hope the year ahead brings you as much joy and light as you bring to everyone around you. May all your dreams take flight.");
           const [wishMessage, setWishMessage] = useState("May the next year bring you all the love...");
           const [finalMessage, setFinalMessage] = useState("Happy Birthday! ❤️");
-          const [youtubeUrl, setYoutubeUrl] = useState('https://www.youtube.com/watch?v=jfKfPfyJRdk');
           const [isLoading, setIsLoading] = useState(false);
           const [error, setError] = useState('');
 
@@ -235,16 +239,16 @@
           };
 
           const handleAddPhoto = () => setPhotos([...photos, { url: '', caption: '' }]);
-          const handlePhotoChange = (index, field, value) => {
-              setPhotos(photos.map((p, i) => i === index ? { ...p, [field]: value } : p));
-          };
+          const handlePhotoChange = (index, field, value) => setPhotos(photos.map((p, i) => i === index ? { ...p, [field]: value } : p));
           const handleRemovePhoto = (index) => setPhotos(photos.filter((_, i) => i !== index));
 
           const handleAddBentoItem = () => setBentoItems([...bentoItems, { icon: '💖', title: '', text: '' }]);
-          const handleBentoItemChange = (index, field, value) => {
-              setBentoItems(bentoItems.map((item, i) => i === index ? { ...item, [field]: value } : item));
-          };
+          const handleBentoItemChange = (index, field, value) => setBentoItems(bentoItems.map((item, i) => i === index ? { ...item, [field]: value } : item));
           const handleRemoveBentoItem = (index) => setBentoItems(bentoItems.filter((_, i) => i !== index));
+          
+          const handleAddSong = () => setPlaylist([...playlist, { url: '', title: '' }]);
+          const handleSongChange = (index, field, value) => setPlaylist(playlist.map((s, i) => (i === index ? { ...s, [field]: value } : s)));
+          const handleRemoveSong = (index) => setPlaylist(playlist.filter((_, i) => i !== index));
 
           const handleGenerateContent = async () => {
               if (!recipientName || !relationship || !memories) {
@@ -271,9 +275,9 @@
           const handleSubmit = (e) => {
               e.preventDefault();
               setError('');
-              const youtubeId = getYouTubeId(youtubeUrl);
-              if (!youtubeId) {
-                  setError('Please enter a valid YouTube URL.');
+              const playlistWithIds = playlist.map(song => ({...song, youtubeId: getYouTubeId(song.url)}));
+              if (playlistWithIds.some(song => !song.youtubeId)) {
+                  setError('Please enter a valid YouTube URL for all songs in the playlist.');
                   return;
               }
               if (photos.some(p => !p.url || !p.caption)) {
@@ -284,7 +288,7 @@
                   setError('Please ensure all "Adore About You" fields are filled out.');
                   return;
               }
-              onSubmit({ recipientName, welcomeMessage, birthdayMessage, bentoItems, galleryTitle, photos, galleryClosing, wishMessage, finalMessage, youtubeId, letter });
+              onSubmit({ recipientName, welcomeMessage, birthdayMessage, bentoItems, galleryTitle, photos, galleryClosing, wishMessage, finalMessage, playlist: playlistWithIds, letter });
           };
 
           const inputStyles = "w-full bg-slate-800/50 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-400 focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-300 shadow-lg";
@@ -311,13 +315,12 @@
                           <button type="button" onClick={handleGenerateContent} disabled={isLoading} className="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2">{isLoading ? 'Generating...' : '✨ Use AI to Write Messages'}</button>
                       </details>
                       <details className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
-                          <summary className="font-bold text-lg text-white cursor-pointer">Step 2: Customize Main Messages & Music</summary>
+                          <summary className="font-bold text-lg text-white cursor-pointer">Step 2: Customize Main Messages</summary>
                           <div className="space-y-4 mt-4">
                               <div><label className={labelStyles}>Welcome Message</label><textarea value={welcomeMessage} onChange={e => setWelcomeMessage(e.target.value)} className={inputStyles} /></div>
                               <div><label className={labelStyles}>Birthday Message</label><textarea value={birthdayMessage} onChange={e => setBirthdayMessage(e.target.value)} className={inputStyles} /></div>
                               <div><label className={labelStyles}>Wish For Them</label><textarea value={wishMessage} onChange={e => setWishMessage(e.target.value)} className={inputStyles} /></div>
                               <div><label className={labelStyles}>Final Message</label><input type="text" value={finalMessage} onChange={e => setFinalMessage(e.target.value)} className={inputStyles} /></div>
-                              <div><label className={labelStyles}>Background Music (YouTube URL)</label><input type="url" value={youtubeUrl} onChange={e => setYoutubeUrl(e.target.value)} className={inputStyles} /></div>
                           </div>
                       </details>
                       <details className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
@@ -350,11 +353,21 @@
                       <details className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
                           <summary className="font-bold text-lg text-white cursor-pointer">Step 5: Customize The Letter</summary>
                           <div className="space-y-4 mt-4">
-                              <div>
-                                  <label className={labelStyles}>Your Letter</label>
-                                  <textarea value={letter} onChange={e => setLetter(e.target.value)} className={`${inputStyles} h-48`} />
-                              </div>
+                              <div><label className={labelStyles}>Your Letter</label><textarea value={letter} onChange={e => setLetter(e.target.value)} className={`${inputStyles} h-48`} /></div>
                           </div>
+                      </details>
+                      <details className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                          <summary className="font-bold text-lg text-white cursor-pointer">Step 6: Customize Playlist</summary>
+                          <div className="space-y-4 mt-4">
+                              {playlist.map((song, index) => (
+                                  <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] items-end gap-4">
+                                      <div><label className={labelStyles}>Song #{index + 1} URL</label><input type="url" value={song.url} onChange={e => handleSongChange(index, 'url', e.target.value)} className={inputStyles} placeholder="https://youtube.com/..." /></div>
+                                      <div><label className={labelStyles}>Title</label><input type="text" value={song.title} onChange={e => handleSongChange(index, 'title', e.target.value)} className={inputStyles} placeholder="Song Title" /></div>
+                                      <button type="button" onClick={() => handleRemoveSong(index)} className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-3 rounded-lg h-12 w-full md:w-auto">-</button>
+                                  </div>
+                              ))}
+                          </div>
+                          <button type="button" onClick={handleAddSong} className="w-full mt-4 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300">+</button>
                       </details>
                       {error && <div className="bg-red-900/50 text-red-300 p-3 rounded-lg text-center">{error}</div>}
                       <button type="submit" className="w-full btn-primary text-white font-bold py-4 px-4 rounded-lg text-xl">
@@ -372,17 +385,60 @@
           const animationFrameId = useRef(null);
           const [currentStep, setCurrentStep] = useState(1);
           const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+          const [currentSongIndex, setCurrentSongIndex] = useState(null);
           const [isPlayerReady, setIsPlayerReady] = useState(false);
           const playerRef = useRef(null);
-          const TOTAL_STEPS = 6;
+          const [wishes, setWishes] = useState([]);
+          const [newWish, setNewWish] = useState('');
+          const [copySuccess, setCopySuccess] = useState('');
+          const TOTAL_STEPS = 8;
+          
+          useEffect(() => {
+            const storedWishes = localStorage.getItem(`birthdayWishes_${config.recipientName}`);
+            if (storedWishes) setWishes(JSON.parse(storedWishes));
+          }, [config.recipientName]);
+
+          useEffect(() => {
+            localStorage.setItem(`birthdayWishes_${config.recipientName}`, JSON.stringify(wishes));
+          }, [wishes, config.recipientName]);
+
+          const handleAddWish = () => {
+            if (newWish.trim()) {
+              setWishes([...wishes, newWish.trim()]);
+              setNewWish('');
+            }
+          };
+
+          const handleRemoveWish = (indexToRemove) => {
+            setWishes(wishes.filter((_, index) => index !== indexToRemove));
+          };
+
+          const handleCopyWishes = () => {
+              navigator.clipboard.writeText(wishes.join('\n')).then(() => {
+                  setCopySuccess('Copied to clipboard!');
+                  setTimeout(() => setCopySuccess(''), 2000);
+              }, () => {
+                  setCopySuccess('Failed to copy.');
+                  setTimeout(() => setCopySuccess(''), 2000);
+              });
+          };
 
           useEffect(() => {
               const initPlayer = () => {
                   if (playerRef.current) playerRef.current.destroy();
+                  const firstVideoId = config.playlist?.[0]?.youtubeId;
+                  if (!firstVideoId) return;
+
                   playerRef.current = new window.YT.Player('youtube-player', {
-                      height: '0', width: '0', videoId: config.youtubeId,
-                      playerVars: { autoplay: 0, controls: 0, loop: 1, playlist: config.youtubeId },
-                      events: { 'onReady': (event) => { event.target.setVolume(30); setIsPlayerReady(true); } }
+                      height: '0', width: '0', videoId: firstVideoId,
+                      playerVars: { autoplay: 0, controls: 0, loop: 1, playlist: firstVideoId },
+                      events: { 
+                          'onReady': (event) => { event.target.setVolume(30); setIsPlayerReady(true); },
+                          'onStateChange': (event) => {
+                              if (event.data === window.YT.PlayerState.PLAYING) setIsMusicPlaying(true);
+                              else if (event.data === window.YT.PlayerState.PAUSED || event.data === window.YT.PlayerState.ENDED) setIsMusicPlaying(false);
+                          }
+                      }
                   });
               };
               if (window.YT?.Player) { initPlayer(); } else { window.onYouTubeIframeAPIReady = initPlayer; }
@@ -406,38 +462,24 @@
               
               objectsRef.current = [];
               for (let i = 0; i < 25; i++) {
-                  const x = (Math.random() - 0.5) * 20;
-                  const y = (Math.random() - 0.5) * 20;
-                  const z = (Math.random() - 0.5) * 10;
+                  const x = (Math.random() - 0.5) * 20; const y = (Math.random() - 0.5) * 20; const z = (Math.random() - 0.5) * 10;
                   const userData = { sinOffset: Math.random() * Math.PI * 2, speed: Math.random() * 0.3 + 0.1, initialPosition: new THREE.Vector3(x, y, z) };
                   let obj;
 
-                  if (Math.random() > 0.4) { // 60% chance of heart
-                      obj = new THREE.Mesh(heartGeom, heartMaterial.clone());
-                      userData.isGift = false;
-                  } else { // 40% chance of gift
+                  if (Math.random() > 0.4) {
+                      obj = new THREE.Mesh(heartGeom, heartMaterial.clone()); userData.isGift = false;
+                  } else {
                       const giftGroup = new THREE.Group();
-                      const giftColors = [0xa78bfa, 0x7dd3fc, 0x60a5fa];
-                      const ribbonColor = 0xf1f5f9;
+                      const giftColors = [0xa78bfa, 0x7dd3fc, 0x60a5fa]; const ribbonColor = 0xf1f5f9;
                       const boxMaterial = new THREE.MeshStandardMaterial({ color: giftColors[Math.floor(Math.random() * giftColors.length)], roughness: 0.3, metalness: 0.6, transparent: true });
                       const ribbonMaterial = new THREE.MeshStandardMaterial({ color: ribbonColor, roughness: 0.3, metalness: 0.6, transparent: true });
-                      const boxGeom = new THREE.BoxGeometry(1.5, 1.5, 1.5);
-                      const boxMesh = new THREE.Mesh(boxGeom, boxMaterial);
-                      const ribbon1Geom = new THREE.BoxGeometry(1.6, 0.3, 1.6);
-                      const ribbon1Mesh = new THREE.Mesh(ribbon1Geom, ribbonMaterial);
-                      const ribbon2Geom = new THREE.BoxGeometry(0.3, 1.6, 1.6);
-                      const ribbon2Mesh = new THREE.Mesh(ribbon2Geom, ribbonMaterial);
-                      giftGroup.add(boxMesh, ribbon1Mesh, ribbon2Mesh);
-                      obj = giftGroup;
-                      userData.isGift = true;
+                      const boxMesh = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.5), boxMaterial);
+                      const ribbon1Mesh = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.3, 1.6), ribbonMaterial);
+                      const ribbon2Mesh = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.6, 1.6), ribbonMaterial);
+                      giftGroup.add(boxMesh, ribbon1Mesh, ribbon2Mesh); obj = giftGroup; userData.isGift = true;
                   }
-
-                  obj.position.set(x, y, z);
-                  obj.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-                  obj.scale.setScalar(Math.random() * 0.5 + 0.3);
-                  obj.userData = userData;
-                  scene.add(obj);
-                  objectsRef.current.push(obj);
+                  obj.position.set(x, y, z); obj.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+                  obj.scale.setScalar(Math.random() * 0.5 + 0.3); obj.userData = userData; scene.add(obj); objectsRef.current.push(obj);
               }
 
               const animate = () => {
@@ -448,9 +490,7 @@
               };
               animate();
               const handleResize = () => {
-                  camera.aspect = window.innerWidth / window.innerHeight;
-                  camera.updateProjectionMatrix();
-                  renderer.setSize(window.innerWidth, window.innerHeight);
+                  camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight);
               };
               window.addEventListener('resize', handleResize);
               gsap.from('#step-1', { opacity: 0, scale: 1.1, duration: 1, ease: 'power3.out', delay: 0.5 });
@@ -459,15 +499,32 @@
                   if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
                   playerRef.current?.destroy();
               };
-          }, [config.youtubeId]);
+          }, [config.playlist]);
+          
+          const handlePlaySong = (index) => {
+              if (!isPlayerReady || !playerRef.current) return;
+              if (index === currentSongIndex) { // Toggle play/pause for the current song
+                  const playerState = playerRef.current.getPlayerState();
+                  if (playerState === 1) playerRef.current.pauseVideo();
+                  else playerRef.current.playVideo();
+              } else { // Play a new song
+                  const videoId = config.playlist[index].youtubeId;
+                  playerRef.current.loadVideoById(videoId);
+                  setCurrentSongIndex(index);
+              }
+          };
 
           const toggleMusic = () => {
               if (!isPlayerReady || !playerRef.current || typeof playerRef.current.getPlayerState !== 'function') return;
+              if (currentSongIndex === null) setCurrentSongIndex(0);
               const playerState = playerRef.current.getPlayerState();
-              if (playerState === 1) { playerRef.current.pauseVideo(); setIsMusicPlaying(false); } else { playerRef.current.playVideo(); setIsMusicPlaying(true); }
+              if (playerState === 1) { playerRef.current.pauseVideo(); } else { playerRef.current.playVideo(); }
           };
           const handleBegin = () => {
-              if (isPlayerReady && playerRef.current?.playVideo) { playerRef.current.playVideo(); setIsMusicPlaying(true); }
+              if (isPlayerReady && playerRef.current?.playVideo) {
+                  setCurrentSongIndex(0);
+                  playerRef.current.playVideo();
+              }
               goToStep(2);
           };
 
@@ -486,15 +543,8 @@
               objectsRef.current.forEach(obj => {
                   gsap.killTweensOf(obj.position);
                   gsap.to(obj.position, { x: obj.userData.initialPosition.x, y: obj.userData.initialPosition.y, z: obj.userData.initialPosition.z, duration: 1, ease: 'power2.out' });
-                  if (obj.userData.isGift) {
-                      obj.children.forEach(child => {
-                          gsap.killTweensOf(child.material);
-                          gsap.to(child.material, { opacity: 1, duration: 1 });
-                      });
-                  } else {
-                      gsap.killTweensOf(obj.material);
-                      gsap.to(obj.material, { opacity: 1, duration: 1 });
-                  }
+                  if (obj.userData.isGift) { obj.children.forEach(child => { gsap.killTweensOf(child.material); gsap.to(child.material, { opacity: 1, duration: 1 }); });
+                  } else { gsap.killTweensOf(obj.material); gsap.to(obj.material, { opacity: 1, duration: 1 }); }
               });
               goToStep(1);
           };
@@ -509,39 +559,19 @@
               
               objectsRef.current.forEach(obj => {
                   gsap.to(obj.position, { y: obj.position.y + (Math.random() > 0.5 ? 15 : -15), x: obj.position.x + (Math.random() > 0.5 ? 15 : -15), z: 10, duration: 5, ease: 'power2.in' });
-                  if (obj.userData.isGift) {
-                      obj.children.forEach(child => {
-                           gsap.to(child.material, { opacity: 0, duration: 5, ease: 'power2.in' });
-                      });
-                  } else {
-                      gsap.to(obj.material, { opacity: 0, duration: 5, ease: 'power2.in' });
-                  }
+                  if (obj.userData.isGift) { obj.children.forEach(child => { gsap.to(child.material, { opacity: 0, duration: 5, ease: 'power2.in' }); });
+                  } else { gsap.to(obj.material, { opacity: 0, duration: 5, ease: 'power2.in' }); }
               });
           };
 
           useEffect(() => {
-              const galleryWrapper = document.getElementById('photo-gallery-wrapper');
-              if (!galleryWrapper) return;
-              const gallery = galleryWrapper.querySelector('.photo-gallery');
-              const polaroids = galleryWrapper.querySelectorAll('.polaroid');
-              if (!gallery || !polaroids) return;
-
-              const onMove = (e) => {
-                  const rect = galleryWrapper.getBoundingClientRect();
-                  const x = e.clientX - rect.left, y = e.clientY - rect.top;
-                  gsap.to(polaroids, { rotateX: gsap.utils.mapRange(0, rect.height, 10, -10, y), rotateY: gsap.utils.mapRange(0, rect.width, -10, 10, x), duration: 0.5, ease: 'power1.out' });
-              };
+              const galleryWrapper = document.getElementById('photo-gallery-wrapper'); if (!galleryWrapper) return;
+              const gallery = galleryWrapper.querySelector('.photo-gallery'); const polaroids = galleryWrapper.querySelectorAll('.polaroid'); if (!gallery || !polaroids) return;
+              const onMove = (e) => { const rect = galleryWrapper.getBoundingClientRect(); const x = e.clientX - rect.left, y = e.clientY - rect.top; gsap.to(polaroids, { rotateX: gsap.utils.mapRange(0, rect.height, 10, -10, y), rotateY: gsap.utils.mapRange(0, rect.width, -10, 10, x), duration: 0.5, ease: 'power1.out' }); };
               const onLeave = () => gsap.to(polaroids, { rotateX: 0, rotateY: 0, duration: 0.5, ease: 'power1.out' });
               const onWheel = (e) => { if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; e.preventDefault(); gallery.scrollLeft += e.deltaY; };
-
-              galleryWrapper.addEventListener('mousemove', onMove);
-              galleryWrapper.addEventListener('mouseleave', onLeave);
-              gallery.addEventListener('wheel', onWheel, { passive: false });
-              return () => {
-                  galleryWrapper.removeEventListener('mousemove', onMove);
-                  galleryWrapper.removeEventListener('mouseleave', onLeave);
-                  gallery.removeEventListener('wheel', onWheel);
-              };
+              galleryWrapper.addEventListener('mousemove', onMove); galleryWrapper.addEventListener('mouseleave', onLeave); gallery.addEventListener('wheel', onWheel, { passive: false });
+              return () => { galleryWrapper.removeEventListener('mousemove', onMove); galleryWrapper.removeEventListener('mouseleave', onLeave); gallery.removeEventListener('wheel', onWheel); };
           }, [currentStep]);
 
           const cardStyles = "step absolute inset-0 m-auto w-full card p-6 md:p-8 flex flex-col items-center justify-start gap-4 text-center max-h-[90vh] overflow-y-auto pt-20 pb-8";
@@ -556,19 +586,19 @@
                           <button onClick={handleGoHome} title="Home" className="w-12 h-12 rounded-full flex items-center justify-center text-white bg-slate-800/70 backdrop-blur-sm border border-slate-600 hover:bg-slate-700/70 transition-colors"><i className="fas fa-home"></i></button>
                           <button onClick={onStartOver} title="Create Another Wish" className="w-12 h-12 rounded-full flex items-center justify-center text-white bg-slate-800/70 backdrop-blur-sm border border-slate-600 hover:bg-slate-700/70 transition-colors"><i className="fas fa-plus"></i></button>
                       </div>
-                      <button onClick={toggleMusic} className="fixed top-12 right-5 z-20 w-10 h-10 rounded-full flex items-center justify-center text-pink-300 bg-slate-900/30 backdrop-blur-sm hover:bg-slate-900/50 transition-colors">{isMusicPlaying ? '❚❚' : '▶'}</button>
+                      <button onClick={toggleMusic} title="Toggle Music" className="fixed top-12 right-5 z-20 w-12 h-12 rounded-full flex items-center justify-center text-white bg-slate-800/70 backdrop-blur-sm border border-slate-600 hover:bg-slate-700/70 transition-colors">
+                          <i className={`fas ${isMusicPlaying ? 'fa-pause' : 'fa-play'}`}></i>
+                      </button>
                       <div className="relative w-full max-w-2xl h-full flex items-center justify-center">
                           <div id="step-1" className={`${cardStyles} gap-6 pb-12`} style={{ display: currentStep === 1 ? 'flex' : 'none', justifyContent: 'center' }}><div className="text-7xl animate-pulse">❤️</div><h1 className="text-5xl font-display text-gradient">Hey {config.recipientName},</h1><p>{config.welcomeMessage}</p><button onClick={handleBegin} className="btn-primary rounded-full px-8 py-3 font-bold mt-4">Let's Begin</button></div>
                           <div id="step-2" className={cardStyles} style={{ display: currentStep === 2 ? 'flex' : 'none', justifyContent: 'center' }}><div className="text-7xl">🎉</div><h1 className="text-5xl font-display text-gradient">Happy Birthday!</h1><p>{config.birthdayMessage}</p><button onClick={() => goToStep(3)} className="btn-primary rounded-full px-8 py-3 font-bold mt-4">There's more...</button></div>
                           <div id="step-3" className={cardStyles} style={{ display: currentStep === 3 ? 'flex' : 'none' }}>
                               <h2 className="text-4xl font-display text-gradient text-center">A Few Things I Adore About You</h2>
                               <div className="bento-grid w-full mt-4">
-                                  {config.bentoItems.map((item, i) => {
-                                      const totalItems = config.bentoItems.length;
-                                      const isLastOnOdd = totalItems % 2 !== 0 && i === totalItems - 1;
+                                  {(config.bentoItems || []).map((item, i) => {
+                                      const totalItems = (config.bentoItems || []).length; const isLastOnOdd = totalItems % 2 !== 0 && i === totalItems - 1;
                                       return (<div key={item.title} className={`bento-item ${isLastOnOdd ? 'col-span-2' : ''}`}>
-                                          <h3 className="font-bold text-lg text-white mb-2">{item.icon} {item.title}</h3>
-                                          <p className="text-sm opacity-80">{item.text}</p>
+                                          <h3 className="font-bold text-lg text-white mb-2">{item.icon} {item.title}</h3><p className="text-sm opacity-80">{item.text}</p>
                                       </div>);
                                   })}
                               </div>
@@ -576,16 +606,42 @@
                           </div>
                           <div id="step-4" className={cardStyles} style={{ display: currentStep === 4 ? 'flex' : 'none' }}>
                               <h2 className="text-4xl font-display text-gradient text-center">{config.galleryTitle}</h2>
-                              <div id="photo-gallery-wrapper" className="w-full relative"><div className="photo-gallery flex gap-8 overflow-x-auto p-4 snap-x snap-mandatory scroll-smooth">{config.photos.map((photo, i) => <figure key={i} className={`polaroid w-64 h-auto flex-shrink-0 snap-center`} style={{transform: `rotate(${(i%2===0? -1:1) * (2+i)}deg)`}}><img src={photo.url} alt={photo.caption} className="w-full h-auto object-cover" /><figcaption>{photo.caption}</figcaption></figure>)}</div></div>
+                              <div id="photo-gallery-wrapper" className="w-full relative"><div className="photo-gallery flex gap-8 overflow-x-auto p-4 snap-x snap-mandatory scroll-smooth">{(config.photos || []).map((photo, i) => <figure key={i} className={`polaroid w-64 h-auto flex-shrink-0 snap-center`} style={{transform: `rotate(${(i%2===0? -1:1) * (2+i)}deg)`}}><img src={photo.url} alt={photo.caption} className="w-full h-auto object-cover" /><figcaption>{photo.caption}</figcaption></figure>)}</div></div>
                               <p className="text-center italic mt-4">{config.galleryClosing}</p>
-                              <button onClick={() => goToStep(5)} className="btn-primary rounded-full px-8 py-3 font-bold mt-4">Read my letter to you</button>
+                              <button onClick={() => goToStep(5)} className="btn-primary rounded-full px-8 py-3 font-bold mt-4">Make a wish...</button>
                           </div>
                           <div id="step-5" className={cardStyles} style={{ display: currentStep === 5 ? 'flex' : 'none' }}>
+                              <h2 className="text-4xl font-display text-gradient text-center">Your Birthday Wish List</h2>
+                              <div className="w-full max-w-md mx-auto mt-4">
+                                <div className="flex gap-2"><input type="text" value={newWish} onChange={(e) => setNewWish(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleAddWish()} placeholder="What are you wishing for?" className="flex-grow bg-slate-800/50 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-400 focus:ring-2 focus:ring-pink-500"/><button onClick={handleAddWish} className="bg-pink-600 hover:bg-pink-700 text-white font-bold p-3 rounded-lg">+</button></div>
+                                <ul className="mt-4 space-y-2 text-left">{wishes.map((wish, index) => (<li key={index} className="flex justify-between items-center bg-slate-800/50 p-3 rounded-lg"><span>{wish}</span><button onClick={() => handleRemoveWish(index)} className="text-red-400 hover:text-red-300">&times;</button></li>))}</ul>
+                                {wishes.length > 0 && <button onClick={handleCopyWishes} className="mt-4 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg">{copySuccess || 'Copy My Wishes'}</button>}
+                              </div>
+                             <button onClick={() => goToStep(6)} className="btn-primary rounded-full px-8 py-3 font-bold mt-6 self-center">A soundtrack for you</button>
+                          </div>
+                           <div id="step-6" className={cardStyles} style={{ display: currentStep === 6 ? 'flex' : 'none' }}>
+                                <h2 className="text-4xl font-display text-gradient text-center">A Soundtrack For You</h2>
+                                <div className="w-full max-w-md mx-auto mt-4 space-y-2">
+                                    {(config.playlist || []).map((song, index) => (
+                                        <div key={index} className="flex items-center justify-between gap-4 bg-slate-800/50 p-3 rounded-lg">
+                                            <div className="flex items-center gap-3">
+                                                <i className="fas fa-music text-pink-400"></i>
+                                                <span className="text-left">{song.title}</span>
+                                            </div>
+                                            <button onClick={() => handlePlaySong(index)} className="w-10 h-10 flex-shrink-0 rounded-full bg-pink-600 hover:bg-pink-700 flex items-center justify-center text-white transition-transform transform hover:scale-110">
+                                                <i className={`fas ${currentSongIndex === index && isMusicPlaying ? 'fa-pause' : 'fa-play'}`}></i>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <button onClick={() => goToStep(7)} className="btn-primary rounded-full px-8 py-3 font-bold mt-6 self-center">Read my letter</button>
+                            </div>
+                          <div id="step-7" className={cardStyles} style={{ display: currentStep === 7 ? 'flex' : 'none' }}>
                               <h2 className="text-4xl font-display text-gradient text-center">A Letter For You</h2>
                               <div className="w-full text-left overflow-y-auto max-h-[50vh] prose prose-invert prose-p:text-slate-300 mt-4 px-4 whitespace-pre-wrap">{config.letter}</div>
-                              <button onClick={() => goToStep(6)} className="btn-primary rounded-full px-8 py-3 font-bold mt-6 self-center">One last thing...</button>
+                              <button onClick={() => goToStep(8)} className="btn-primary rounded-full px-8 py-3 font-bold mt-6 self-center">One last thing...</button>
                           </div>
-                          <div id="step-6" className={cardStyles} style={{ display: currentStep === 6 ? 'flex' : 'none', justifyContent: 'center' }}>
+                          <div id="step-8" className={cardStyles} style={{ display: currentStep === 8 ? 'flex' : 'none', justifyContent: 'center' }}>
                               <div className="text-7xl">🎂</div>
                               <h1 className="text-5xl font-display text-gradient">My Wish For You</h1>
                               <p>{config.wishMessage}</p>
@@ -599,24 +655,70 @@
           );
       };
 
+      // --- PasswordGate Component ---
+      const PasswordGate = ({ onAuthSuccess }) => {
+          const [password, setPassword] = useState('');
+          const [error, setError] = useState('');
+
+          const handleSubmit = (e) => {
+              e.preventDefault();
+              if (password === 'thakkudu') {
+                  onAuthSuccess();
+              } else {
+                  setError('Incorrect Password');
+                  setPassword('');
+              }
+          };
+
+          return (
+              <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 text-slate-200">
+                  <div id="aurora-bg">
+                      <div className="aurora-blur aurora-1 top-[10%] left-[15%]"></div>
+                      <div className="aurora-blur aurora-2 top-[60%] left-[30%]"></div>
+                  </div>
+                  <form onSubmit={handleSubmit} className="w-full max-w-sm mx-auto card p-8 space-y-6">
+                      <div className="text-center">
+                          <h1 className="text-3xl font-display text-gradient">Secret Name😎</h1>
+                      </div>
+                      <div>
+                          <input
+                              type="password"
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              className="w-full bg-slate-800/50 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-400 focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-300 shadow-lg"
+                              placeholder="???🧐"
+                              autoFocus
+                          />
+                      </div>
+                      {error && <div className="bg-red-900/50 text-red-300 p-3 rounded-lg text-center">{error}</div>}
+                      <button type="submit" className="w-full btn-primary text-white font-bold py-3 px-4 rounded-lg text-lg">
+                          Unlock
+                      </button>
+                  </form>
+              </div>
+          );
+      };
+
       // --- App Component ---
       const App = () => {
+          const [isAuthenticated, setIsAuthenticated] = useState(false);
           const [config, setConfig] = useState(null);
 
           useEffect(() => {
+              if (!isAuthenticated) return;
+
               const handleHashChange = () => {
                   const hash = window.location.hash.slice(1);
                   if (hash.startsWith('data=')) {
                       try {
                           const encodedData = hash.substring(5);
-                          // Reverse the encoding process to correctly handle Unicode characters.
                           const base64Decoded = atob(decodeURIComponent(encodedData));
                           const jsonString = decodeURIComponent(escape(base64Decoded));
                           const parsedConfig = JSON.parse(jsonString);
                           setConfig(parsedConfig);
                       } catch (e) {
                           console.error("Failed to parse config from URL hash", e);
-                          window.location.hash = ''; // Clear invalid hash
+                          window.location.hash = '';
                           setConfig(null);
                       }
                   } else {
@@ -624,18 +726,14 @@
                   }
               };
 
-              handleHashChange(); // Check hash on initial load
-              window.addEventListener('hashchange', handleHashChange); // Listen for changes
-
-              return () => {
-                  window.removeEventListener('hashchange', handleHashChange); // Cleanup listener
-              };
-          }, []); // Empty dependency array ensures this runs only once on mount
+              handleHashChange();
+              window.addEventListener('hashchange', handleHashChange);
+              return () => window.removeEventListener('hashchange', handleHashChange);
+          }, [isAuthenticated]);
 
           const handleCreate = (newConfig) => {
               try {
                   const jsonString = JSON.stringify(newConfig);
-                  // Handle Unicode characters by converting the string to a format btoa can handle.
                   const safeStringForBtoA = unescape(encodeURIComponent(jsonString));
                   const encodedData = btoa(safeStringForBtoA);
                   window.location.hash = `data=${encodeURIComponent(encodedData)}`;
@@ -645,8 +743,16 @@
           };
 
           const handleStartOver = () => {
-              window.location.hash = ''; // Clear hash to return to form
+              window.location.hash = '';
           };
+
+          const handleAuthSuccess = () => {
+              setIsAuthenticated(true);
+          };
+
+          if (!isAuthenticated) {
+              return <PasswordGate onAuthSuccess={handleAuthSuccess} />;
+          }
 
           if (config) {
               return <BirthdayWebsite config={config} onStartOver={handleStartOver} />;
@@ -672,4 +778,3 @@
     </script>
   </body>
 </html>
-```
