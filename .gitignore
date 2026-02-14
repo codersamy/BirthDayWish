@@ -1,8 +1,14 @@
 # Dependencies
 node_modules
 
-# Data files
+# Data files (legacy)
 data/
 
-# Uploaded media
+# Uploaded media (legacy)
 uploads/
+
+# Environment variables
+.env
+
+# Netlify local development directory
+.netlify/

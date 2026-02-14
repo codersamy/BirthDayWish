@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 
 interface PasswordGateProps {
@@ -8,14 +7,29 @@ interface PasswordGateProps {
 const PasswordGate: React.FC<PasswordGateProps> = ({ onAuthSuccess }) => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (password === 'thakkudu') {
-            onAuthSuccess();
-        } else {
-            setError('Incorrect Password');
-            setPassword('');
+        setError('');
+        setIsLoading(true);
+        try {
+            const response = await fetch('/api/check-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            });
+
+            if (response.ok) {
+                onAuthSuccess();
+            } else {
+                setError('Incorrect Password');
+                setPassword('');
+            }
+        } catch (err) {
+            setError('An error occurred. Please try again.');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -26,7 +40,9 @@ const PasswordGate: React.FC<PasswordGateProps> = ({ onAuthSuccess }) => {
                 <div className="text-center"><h1 className="text-3xl font-display text-gradient">Secret Name😎</h1></div>
                 <div><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-slate-800/50 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-400 focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-300 shadow-lg" placeholder="???🧐" autoFocus /></div>
                 {error && <div className="bg-red-900/50 text-red-300 p-3 rounded-lg text-center">{error}</div>}
-                <button type="submit" className="w-full btn-primary text-white font-bold py-3 px-4 rounded-lg text-lg">Unlock</button>
+                <button type="submit" disabled={isLoading} className="w-full btn-primary text-white font-bold py-3 px-4 rounded-lg text-lg">
+                    {isLoading ? 'Checking...' : 'Unlock'}
+                </button>
             </form>
         </div>
     );
