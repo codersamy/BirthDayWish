@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 
 export const generateBirthdayContent = async (name: string, relationship: string, memories: string): Promise<any> => {
@@ -42,7 +41,8 @@ export const generateBirthdayContent = async (name: string, relationship: string
                         },
                         wishMessage: { type: Type.STRING, description: "A forward-looking wish for their year ahead. e.g., 'May the next year bring you all the love...'" },
                         letter: { type: Type.STRING, description: "A heartfelt letter to the recipient, 2-3 paragraphs long." },
-                        finalMessage: { type: Type.STRING, description: `A short, final birthday sign-off. e.g., 'Happy Birthday, ${name}! ❤️'"` },
+                        // FIX: Removed trailing double quote from description string.
+                        finalMessage: { type: Type.STRING, description: `A short, final birthday sign-off. e.g., 'Happy Birthday, ${name}! ❤️'` },
                     },
                     required: ["welcomeMessage", "birthdayMessage", "bentoItems", "wishMessage", "letter", "finalMessage"]
                 },
