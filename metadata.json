@@ -1,4 +1,5 @@
 {
   "name": "Copy of AI Birthday Website Generator",
-  "description": "Create a stunning, futuristic, and romantic birthday website for a loved one. Features a setup form to customize all content, including AI-generated messages, a photo gallery, background music, and a grand animated finale."
+  "description": "Create a stunning, futuristic, and romantic birthday website for a loved one. Features a setup form to customize all content, including AI-generated messages, a photo gallery, background music, and a grand animated finale.",
+  "requestFramePermissions": []
 }
