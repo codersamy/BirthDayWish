@@ -36,6 +36,7 @@ const SetupForm: React.FC<SetupFormProps> = ({ onSubmit, initialData }) => {
     // Config state
     const [cloudinaryCloudName, setCloudinaryCloudName] = useState('');
     const [cloudinaryUploadPreset, setCloudinaryUploadPreset] = useState('');
+    const [cloudinaryFolder, setCloudinaryFolder] = useState('');
 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
@@ -74,7 +75,7 @@ const SetupForm: React.FC<SetupFormProps> = ({ onSubmit, initialData }) => {
         const statusKey = `photo-${index}`;
         setUploadStatus(prev => ({ ...prev, [statusKey]: 'uploading' }));
         try {
-            const uploadedUrl = await uploadToCloudinary(file, cloudinaryCloudName, cloudinaryUploadPreset);
+            const uploadedUrl = await uploadToCloudinary(file, cloudinaryCloudName, cloudinaryUploadPreset, cloudinaryFolder);
             handlePhotoChange(index, 'url', uploadedUrl);
             setUploadStatus(prev => ({ ...prev, [statusKey]: 'success' }));
         } catch (err) {
@@ -93,7 +94,7 @@ const SetupForm: React.FC<SetupFormProps> = ({ onSubmit, initialData }) => {
         const statusKey = `video-${index}`;
         setUploadStatus(prev => ({ ...prev, [statusKey]: 'uploading' }));
         try {
-            const uploadedUrl = await uploadToCloudinary(file, cloudinaryCloudName, cloudinaryUploadPreset);
+            const uploadedUrl = await uploadToCloudinary(file, cloudinaryCloudName, cloudinaryUploadPreset, cloudinaryFolder);
             handleVideoChange(index, 'url', uploadedUrl);
             setUploadStatus(prev => ({ ...prev, [statusKey]: 'success' }));
         } catch (err) {
@@ -186,8 +187,12 @@ const SetupForm: React.FC<SetupFormProps> = ({ onSubmit, initialData }) => {
                             <input type="text" id="cloudinaryCloudName" value={cloudinaryCloudName} onChange={e => setCloudinaryCloudName(e.target.value)} className={inputStyles} placeholder="your-cloud-name" />
                         </div>
                         <div>
-                            <label htmlFor="cloudinaryUploadPreset" className={labelStyles}>Cloudinary Upload Preset:</label>
+                            <label htmlFor="cloudinaryUploadPreset" className={labelStyles}>Cloudinary Unsigned Upload Preset:</label>
                             <input type="text" id="cloudinaryUploadPreset" value={cloudinaryUploadPreset} onChange={e => setCloudinaryUploadPreset(e.target.value)} className={inputStyles} placeholder="your-unsigned-preset" />
+                        </div>
+                         <div>
+                            <label htmlFor="cloudinaryFolder" className={labelStyles}>Optional: Cloudinary Folder Name</label>
+                            <input type="text" id="cloudinaryFolder" value={cloudinaryFolder} onChange={e => setCloudinaryFolder(e.target.value)} className={inputStyles} placeholder="e.g., birthday-wishes" />
                         </div>
                     </div>
                 </details>

@@ -3,7 +3,7 @@
 // - process.env.CLOUDINARY_CLOUD_NAME: Your Cloudinary cloud name.
 // - process.env.CLOUDINARY_UPLOAD_PRESET: The name of an *unsigned* upload preset you created in Cloudinary.
 
-export const uploadToCloudinary = async (file: File, cloudName: string, uploadPreset: string): Promise<string> => {
+export const uploadToCloudinary = async (file: File, cloudName: string, uploadPreset: string, folder?: string): Promise<string> => {
     if (!cloudName || !uploadPreset) {
         const errorMessage = "Cloudinary credentials not provided. Cannot upload media.";
         console.error(errorMessage);
@@ -15,6 +15,9 @@ export const uploadToCloudinary = async (file: File, cloudName: string, uploadPr
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', uploadPreset);
+    if (folder) {
+        formData.append('folder', folder);
+    }
 
     const resourceType = file.type.startsWith('video') ? 'video' : 'image';
 
