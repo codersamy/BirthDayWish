@@ -267,7 +267,7 @@
           const [finalMessage, setFinalMessage] = useState(initialData?.finalMessage || "Happy Birthday! ❤️");
           const [isLoading, setIsLoading] = useState(false);
           const [error, setError] = useState('');
-          const [urlSize, setUrlSize] = useState({ current: 0, limit: 1024 * 1024 }); // 1MB limit for safety
+          const [urlSize, setUrlSize] = useState({ current: 0, warningThreshold: 2 * 1024 * 1024 }); // 2MB warning threshold
 
           const allState = { relationship, memories, recipientName, welcomeMessage, birthdayMessage, bentoItems, galleryTitle, photos, videos, playlist, galleryClosing, letter, wishMessage, wishDescription, finalMessage };
 
@@ -285,7 +285,6 @@
                   const fullUrlLength = `data=${encodeURIComponent(encodedData)}`.length;
                   setUrlSize(prev => ({ ...prev, current: fullUrlLength }));
                 } catch (e) {
-                  // This might happen with very large data URLs during string ops
                   setUrlSize(prev => ({ ...prev, current: Infinity }));
                 }
             };
@@ -327,10 +326,6 @@
           const handleVideoFileChange = (index, e) => {
               const file = e.target.files[0];
               if (file && file.type.startsWith('video/')) {
-                  if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                      setError('Video file is too large (max 5MB). Please use a YouTube/Google Drive link for larger videos.');
-                      return;
-                  }
                   setError('');
                   const reader = new FileReader();
                   reader.onload = (upload) => handleVideoChange(index, 'url', upload.target.result);
@@ -409,8 +404,8 @@
           const labelStyles = "block mb-2 text-sm font-bold text-pink-300";
 
           const sizeInKB = Math.round(urlSize.current / 1024);
-          const limitInKB = Math.round(urlSize.limit / 1024);
-          const isOverLimit = urlSize.current > urlSize.limit;
+          const warningInKB = Math.round(urlSize.warningThreshold / 1024);
+          const isWarning = urlSize.current > urlSize.warningThreshold;
 
           return (
               <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 text-slate-200">
@@ -454,7 +449,7 @@
                       </details>
                       <details className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
                           <summary className="font-bold text-lg text-white cursor-pointer">Step 4: Customize Photo Gallery</summary>
-                           <p className="text-sm text-sky-300 bg-sky-900/50 p-3 rounded-lg mt-2 border border-sky-700"><i className="fas fa-info-circle mr-2"></i>Uploading large files increases the link size. If the link becomes too long, it may not work when shared. Use hosted URLs (e.g., from Google Drive) for large files.</p>
+                           <p className="text-sm text-amber-400 bg-amber-900/50 p-3 rounded-lg mt-2 border border-amber-800"><i className="fas fa-exclamation-circle mr-2"></i><strong>Shareability Notice:</strong> Uploading files stores them in the website link. Very large files create long links that can break when shared. For best results, try to keep the total link size under 2MB, or use hosted URLs (e.g., Google Drive).</p>
                           <div className="space-y-4 mt-4">
                               {photos.map((photo, index) => (
                                   <div key={index} className="p-4 rounded-lg bg-slate-800/50 border border-slate-700 flex items-start gap-4">
@@ -473,7 +468,7 @@
                       </details>
                        <details className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
                           <summary className="font-bold text-lg text-white cursor-pointer">Step 5: Customize Video Messages</summary>
-                           <p className="text-sm text-sky-300 bg-sky-900/50 p-3 rounded-lg mt-2 border border-sky-700"><i className="fas fa-info-circle mr-2"></i>For best results, use YouTube or Google Drive links. Uploading video files (max 5MB) will significantly increase the link size and may cause issues.</p>
+                           <p className="text-sm text-amber-400 bg-amber-900/50 p-3 rounded-lg mt-2 border border-amber-800"><i className="fas fa-exclamation-circle mr-2"></i><strong>Shareability Notice:</strong> For best results, use YouTube or Google Drive links. Uploading video files will significantly increase the final link size and may cause it to break when shared.</p>
                           <div className="space-y-4 mt-4">
                               {videos.map((video, index) => (
                                   <div key={index} className="p-4 rounded-lg bg-slate-800/50 border border-slate-700 flex items-start gap-4">
@@ -522,21 +517,21 @@
                       <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700 sticky bottom-4 z-10 backdrop-blur-sm">
                         <div className="text-center">
                             <p className="text-sm text-slate-400">Estimated Link Size:</p>
-                            <p className={`font-bold text-xl transition-colors ${isOverLimit ? 'text-red-500' : 'text-green-400'}`}>
-                                {sizeInKB} KB / {limitInKB} KB
+                            <p className={`font-bold text-xl transition-colors ${isWarning ? 'text-red-500' : 'text-green-400'}`}>
+                                {sizeInKB} KB
                             </p>
-                            {isOverLimit && (
+                            {isWarning && (
                                 <p className="text-xs text-red-400 mt-1">
                                     <i className="fas fa-exclamation-triangle mr-1"></i>
-                                    Link is too long! It may not work when shared. Please reduce file sizes or use URLs.
+                                    Warning: Link size is large (over {warningInKB} KB). It may not work when shared.
                                 </p>
                             )}
                         </div>
                       </div>
 
                       {error && <div className="bg-red-900/50 text-red-300 p-3 rounded-lg text-center">{error}</div>}
-                      <button type="submit" disabled={isOverLimit} className="w-full btn-primary text-white font-bold py-4 px-4 rounded-lg text-xl">
-                          {isOverLimit ? 'Link Too Large to Create' : 'Create Birthday Website'}
+                      <button type="submit" className="w-full btn-primary text-white font-bold py-4 px-4 rounded-lg text-xl">
+                          Create Birthday Website
                       </button>
                   </form>
               </div>
