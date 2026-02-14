@@ -498,7 +498,8 @@
           const canvasRef = useRef(null);
           const objectsRef = useRef([]);
           const sceneRef = useRef(null);
-          const starsRef = useRef(null);
+          const launchedStarsRef = useRef(null);
+          const starFieldRef = useRef(null);
           const animationFrameId = useRef(null);
           const [currentStep, setCurrentStep] = useState(1);
           const [isMusicPlaying, setIsMusicPlaying] = useState(false);
@@ -521,6 +522,40 @@
           useEffect(() => {
             localStorage.setItem(`birthdayWishes_${config.recipientName}`, JSON.stringify(wishes));
           }, [wishes, config.recipientName]);
+          
+          const goToStep = (stepNumber) => {
+              if (currentStep === stepNumber) return;
+              const currentStepEl = document.getElementById(`step-${currentStep}`);
+              if (currentStepEl) {
+                  gsap.to(currentStepEl, { 
+                      opacity: 0, 
+                      scale: 0.9, 
+                      duration: 0.4, 
+                      ease: 'power3.in',
+                      onComplete: () => {
+                          setCurrentStep(stepNumber);
+                      }
+                  });
+              } else {
+                  setCurrentStep(stepNumber);
+              }
+          };
+
+          useEffect(() => {
+              const stepEl = document.getElementById(`step-${currentStep}`);
+              if (stepEl) {
+                  gsap.fromTo(stepEl, 
+                      { opacity: 0, scale: 1.1 }, 
+                      { 
+                          opacity: 1, 
+                          scale: 1, 
+                          duration: 0.6, 
+                          ease: 'power3.out',
+                          delay: currentStep === 1 ? 0.5 : 0 
+                      }
+                  );
+              }
+          }, [currentStep]);
 
           const handleAddWish = () => {
             if (newWish.trim()) {
@@ -581,15 +616,16 @@
               const heartMaterial = new THREE.MeshStandardMaterial({ color: 0xec4899, roughness: 0.3, metalness: 0.6, transparent: true });
               
               objectsRef.current = [];
-              for (let i = 0; i < 30; i++) {
+              for (let i = 0; i < 25; i++) {
                   const x = (Math.random() - 0.5) * 20; const y = (Math.random() - 0.5) * 20; const z = (Math.random() - 0.5) * 10;
                   const userData = { sinOffset: Math.random() * Math.PI * 2, speed: Math.random() * 0.3 + 0.1, initialPosition: new THREE.Vector3(x, y, z) };
                   let obj;
                   const rand = Math.random();
 
-                  if (rand < 0.33) { // Heart
+                  if (rand < 0.5) { // Heart
                       obj = new THREE.Mesh(heartGeom, heartMaterial.clone());
-                  } else if (rand < 0.66) { // Gift
+                      obj.isGroup = false;
+                  } else { // Gift
                       const giftGroup = new THREE.Group();
                       const giftColors = [0xa78bfa, 0x7dd3fc, 0x60a5fa, 0xfde047]; const ribbonColor = 0xf1f5f9;
                       const boxMaterial = new THREE.MeshStandardMaterial({ color: giftColors[Math.floor(Math.random() * giftColors.length)], roughness: 0.3, metalness: 0.6, transparent: true });
@@ -598,37 +634,38 @@
                       const ribbon1Mesh = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.3, 1.6), ribbonMaterial);
                       const ribbon2Mesh = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.6, 1.6), ribbonMaterial);
                       giftGroup.add(boxMesh, ribbon1Mesh, ribbon2Mesh); obj = giftGroup; obj.isGroup = true;
-                  } else { // Candle
-                      const candleGroup = new THREE.Group();
-                      const candleMaterial = new THREE.MeshStandardMaterial({ color: 0xfff7d4, roughness: 0.4, metalness: 0.2, transparent: true });
-                      const wickMaterial = new THREE.MeshStandardMaterial({ color: 0x444444, transparent: true });
-                      const flameMaterial = new THREE.MeshBasicMaterial({ color: 0xffaa33, transparent: true });
-                      const candleGeom = new THREE.CylinderGeometry(0.3, 0.3, 2, 8);
-                      const wickGeom = new THREE.CylinderGeometry(0.05, 0.05, 0.2, 6);
-                      const flameGeom = new THREE.SphereGeometry(0.15, 8, 8);
-                      const candleMesh = new THREE.Mesh(candleGeom, candleMaterial);
-                      const wickMesh = new THREE.Mesh(wickGeom, wickMaterial); wickMesh.position.y = 1.1;
-                      const flameMesh = new THREE.Mesh(flameGeom, flameMaterial); flameMesh.position.y = 1.3;
-                      const flameLight = new THREE.PointLight(0xffaa33, 5, 5); flameLight.position.y = 1.5;
-                      candleGroup.add(candleMesh, wickMesh, flameMesh, flameLight); obj = candleGroup; obj.isGroup = true;
                   }
 
                   obj.position.set(x, y, z); obj.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
                   obj.scale.setScalar(Math.random() * 0.5 + 0.3); obj.userData = userData; sceneRef.current.add(obj); objectsRef.current.push(obj);
               }
+              
+              const starVertices = [];
+              for (let i = 0; i < 1500; i++) {
+                  starVertices.push((Math.random() - 0.5) * 100, (Math.random() - 0.5) * 100, (Math.random() - 0.5) * 100);
+              }
+              const starGeometry = new THREE.BufferGeometry();
+              starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+              const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1, transparent: true, opacity: 0.8 });
+              starFieldRef.current = new THREE.Points(starGeometry, starMaterial);
+              sceneRef.current.add(starFieldRef.current);
 
               const animate = () => {
                   animationFrameId.current = requestAnimationFrame(animate);
                   const time = Date.now() * 0.0005;
-                  objectsRef.current.forEach(obj => { 
-                    obj.rotation.y += Math.sin(time * obj.userData.speed + obj.userData.sinOffset) * 0.01; 
-                    if (obj.isGroup) { // make flames flicker
-                        const flame = obj.children[2];
-                        if (flame && flame.material.color.getHex() === 0xffaa33) {
-                            flame.scale.y = 1 + Math.sin(time * 20) * 0.1;
-                        }
-                    }
-                  });
+                  objectsRef.current.forEach(obj => { obj.rotation.y += Math.sin(time * obj.userData.speed + obj.userData.sinOffset) * 0.01; });
+                  
+                  if (starFieldRef.current) {
+                      const positions = starFieldRef.current.geometry.attributes.position.array;
+                      for (let i = 0; i < positions.length; i += 3) {
+                          positions[i + 2] += 0.1; 
+                          if (positions[i + 2] > camera.position.z) {
+                              positions[i + 2] = -50;
+                          }
+                      }
+                      starFieldRef.current.geometry.attributes.position.needsUpdate = true;
+                  }
+
                   renderer.render(sceneRef.current, camera);
               };
               animate();
@@ -636,7 +673,6 @@
                   camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight);
               };
               window.addEventListener('resize', handleResize);
-              gsap.from('#step-1', { opacity: 0, scale: 1.1, duration: 1, ease: 'power3.out', delay: 0.5 });
               return () => {
                   window.removeEventListener('resize', handleResize);
                   if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
@@ -670,17 +706,6 @@
               }
               goToStep(2);
           };
-
-          const goToStep = (stepNumber) => {
-              const currentStepEl = document.getElementById(`step-${currentStep}`);
-              const nextStepEl = document.getElementById(`step-${stepNumber}`);
-              if (!currentStepEl || !nextStepEl || currentStep === stepNumber) return;
-              gsap.timeline()
-                  .to(currentStepEl, { opacity: 0, scale: 0.9, duration: 0.4, ease: 'power3.in', onComplete: () => currentStepEl.style.display = 'none' })
-                  .set(nextStepEl, { opacity: 0, scale: 1.1, display: 'flex' })
-                  .to(nextStepEl, { opacity: 1, scale: 1, duration: 0.6, ease: 'power3.out' }, ">-0.2");
-              setCurrentStep(stepNumber);
-          };
           
           const handleLaunchWish = () => {
             const lastWish = wishes.length > 0 ? wishes[wishes.length - 1] : "For all your dreams to come true.";
@@ -699,14 +724,13 @@
                 if (obj.isGroup) {
                     obj.children.forEach(child => {
                         if (child.material) gsap.to(child.material, { opacity: 0, duration: 2.5, ease: 'power3.in' });
-                        if (child.isLight) gsap.to(child, { intensity: 0, duration: 2.5, ease: 'power3.in' });
                     });
                 } else {
                     gsap.to(obj.material, { opacity: 0, duration: 2.5, ease: 'power3.in' });
                 }
             });
 
-            if (starsRef.current) scene.remove(starsRef.current);
+            if (launchedStarsRef.current) scene.remove(launchedStarsRef.current);
             const starVertices = [];
             for (let i = 0; i < 10000; i++) {
                 starVertices.push((Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200);
@@ -714,12 +738,13 @@
             const starGeometry = new THREE.BufferGeometry();
             starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
             const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1, transparent: true, opacity: 0 });
-            starsRef.current = new THREE.Points(starGeometry, starMaterial);
-            scene.add(starsRef.current);
+            launchedStarsRef.current = new THREE.Points(starGeometry, starMaterial);
+            scene.add(launchedStarsRef.current);
 
             const tl = gsap.timeline();
             tl.to('#wish-list-ui', { opacity: 0, duration: 1, ease: 'power2.in' })
-              .to(starsRef.current.material, { opacity: 1, duration: 3, ease: 'power2.out' }, "-=0.5")
+              .to(starFieldRef.current.material, { opacity: 0, duration: 1, ease: 'power2.in'}, '<')
+              .to(launchedStarsRef.current.material, { opacity: 1, duration: 3, ease: 'power2.out' }, "-=0.5")
               .fromTo('#launched-wish-text', { opacity: 0, scale: 0.5, y: 0 }, { opacity: 1, scale: 1.2, y: -50, duration: 3, ease: 'back.out(1.7)' }, "-=2.5")
               .to('#launched-wish-text', { opacity: 0, scale: 0.1, y: -200, duration: 2, ease: 'power3.in' }, "+=1")
               .fromTo('#wish-sent-confirmation', { opacity: 0 }, { opacity: 1, duration: 1.5 }, ">-0.5");
@@ -783,9 +808,12 @@
 
           const handleGoHome = () => {
               setIsWishLaunched(false);
-              if (sceneRef.current && starsRef.current) {
-                sceneRef.current.remove(starsRef.current);
-                starsRef.current = null;
+              if (sceneRef.current && launchedStarsRef.current) {
+                sceneRef.current.remove(launchedStarsRef.current);
+                launchedStarsRef.current = null;
+              }
+              if (starFieldRef.current) {
+                  gsap.to(starFieldRef.current.material, { opacity: 0.8, duration: 1 });
               }
               objectsRef.current.forEach(obj => {
                   gsap.killTweensOf(obj.position);
@@ -796,10 +824,6 @@
                         if (child.material) {
                             gsap.killTweensOf(child.material);
                             gsap.to(child.material, { opacity: 1, duration: 1 });
-                        }
-                        if (child.isLight) {
-                            gsap.killTweensOf(child);
-                            gsap.to(child, { intensity: 5, duration: 1 });
                         }
                     });
                   } else {
@@ -846,7 +870,7 @@
                           <i className={`fas ${isMusicPlaying ? 'fa-pause' : 'fa-play'}`}></i>
                       </button>
                       <div className="relative w-full max-w-2xl h-full flex items-center justify-center">
-                          <div id="step-1" className={`${cardStyles} gap-6 pb-12`} style={{ display: currentStep === 1 ? 'flex' : 'none', justifyContent: 'center' }}><div className="text-7xl animate-pulse">❤️</div><h1 className="text-5xl font-display text-gradient">Hey {config.recipientName},</h1><p>{config.welcomeMessage}</p><button onClick={handleBegin} className="btn-primary rounded-full px-8 py-3 font-bold mt-4">Let's Begin</button></div>
+                          <div id="step-1" className={cardStyles} style={{ display: currentStep === 1 ? 'flex' : 'none', justifyContent: 'center' }}><div className="text-7xl animate-pulse">❤️</div><h1 className="text-5xl font-display text-gradient">Hey {config.recipientName},</h1><p>{config.welcomeMessage}</p><button onClick={handleBegin} className="btn-primary rounded-full px-8 py-3 font-bold mt-4">Let's Begin</button></div>
                           <div id="step-2" className={cardStyles} style={{ display: currentStep === 2 ? 'flex' : 'none', justifyContent: 'center' }}><div className="text-7xl">🎉</div><h1 className="text-5xl font-display text-gradient">Happy Birthday!</h1><p>{config.birthdayMessage}</p><button onClick={() => goToStep(3)} className="btn-primary rounded-full px-8 py-3 font-bold mt-4">There's more...</button></div>
                           <div id="step-3" className={cardStyles} style={{ display: currentStep === 3 ? 'flex' : 'none' }}>
                               <h2 className="text-4xl font-display text-gradient text-center">A Few Things I Adore About You</h2>
