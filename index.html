@@ -30,6 +30,7 @@
       }
       .font-display {
         font-family: 'Playfair Display', serif;
+        line-height: 1.3;
       }
 
       /* Aurora Background */
@@ -94,7 +95,7 @@
       }
       .polaroid figcaption {
         position: absolute; bottom: 1rem; left: 1rem; right: 1rem;
-        text-align: center; color: #333; font-family: 'Playfair Display', serif;
+        text-align: center; color: #333;
       }
       #photo-gallery-wrapper::before,
       #photo-gallery-wrapper::after {
@@ -113,6 +114,21 @@
       #photo-gallery-wrapper::after {
         right: 0;
         background: linear-gradient(to left, var(--card-bg-color), transparent);
+      }
+      
+      /* Video Player */
+      .aspect-video-container {
+        position: relative;
+        width: 100%;
+        padding-top: 56.25%; /* 16:9 Aspect Ratio */
+      }
+      .aspect-video-container iframe,
+      .aspect-video-container video {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
       }
     </style>
   <script type="importmap">
@@ -205,42 +221,92 @@
       };
 
       // --- SetupForm Component ---
-      const SetupForm = ({ onSubmit }) => {
-          const [relationship, setRelationship] = useState('');
-          const [memories, setMemories] = useState('');
-          const [recipientName, setRecipientName] = useState('Beautiful');
-          const [welcomeMessage, setWelcomeMessage] = useState("I built a little world for you...");
-          const [birthdayMessage, setBirthdayMessage] = useState("Another year of you making the world brighter.");
-          const [bentoItems, setBentoItems] = useState([
+      const SetupForm = ({ onSubmit, initialData }) => {
+          const defaultPhotos = [
+              { url: 'https://i.ibb.co/6Z6XgCg/crush.webp', caption: 'Our favorite memory.' },
+              { url: 'https://images.unsplash.com/photo-1524250502761-1ac6f2e30d43?q=80&w=1888', caption: 'That day at the cafe.' }
+          ];
+          const defaultVideos = [
+              { url: 'https://www.youtube.com/watch?v=LXb3EKWsInQ', caption: 'A Special Message' }
+          ];
+          const defaultPlaylist = [
+              { url: 'https://www.youtube.com/watch?v=jfKfPfyJRdk', title: 'Lofi Girl - beats to relax/study to' },
+              { url: 'https://www.youtube.com/watch?v=rUxyKA_-grg', title: 'a playlist of songs that make you feel like the main character' }
+          ];
+
+          const reconstructUrl = (item, type) => {
+              if (item.type === 'youtube') return `https://www.youtube.com/watch?v=${item.id}`;
+              if (item.type === 'googledrive') return `https://drive.google.com/file/d/${item.id}/view`;
+              if (item.type === 'data') return item.url;
+              return '';
+          };
+          
+          const [relationship, setRelationship] = useState(initialData?.relationship || '');
+          const [memories, setMemories] = useState(initialData?.memories || '');
+          const [recipientName, setRecipientName] = useState(initialData?.recipientName || 'Beautiful');
+          const [welcomeMessage, setWelcomeMessage] = useState(initialData?.welcomeMessage || "I built a little world for you...");
+          const [birthdayMessage, setBirthdayMessage] = useState(initialData?.birthdayMessage || "Another year of you making the world brighter.");
+          const [bentoItems, setBentoItems] = useState(initialData?.bentoItems || [
               { icon: '✨', title: 'Your Unmatched Kindness', text: 'The genuine warmth you show to everyone is something truly rare and beautiful.' },
               { icon: '😊', title: 'That Smile', text: "It's a work of art." },
               { icon: '🌟', title: 'Your Radiant Spirit', text: 'Your passion for life is infectious.' }
           ]);
-          const [galleryTitle, setGalleryTitle] = useState("A Gallery of Memories");
-          const [photos, setPhotos] = useState([
-              { url: 'https://i.ibb.co/6Z6XgCg/crush.webp', caption: 'Our favorite memory.' },
-              { url: 'https://images.unsplash.com/photo-1524250502761-1ac6f2e30d43?q=80&w=1888', caption: 'That day at the cafe.' }
-          ]);
-          const [playlist, setPlaylist] = useState([
-              { url: 'https://www.youtube.com/watch?v=jfKfPfyJRdk', title: 'Lofi Girl - beats to relax/study to' },
-              { url: 'https://www.youtube.com/watch?v=rUxyKA_-grg', title: 'a playlist of songs that make you feel like the main character' }
-          ]);
-          const [galleryClosing, setGalleryClosing] = useState("Every moment with you feels like a scene...");
-          const [letter, setLetter] = useState("My Dearest Beautiful,\n\nOn your special day, I find myself reflecting on all the moments we've shared, big and small. Each one is a treasure, a testament to the incredible person you are. From your infectious laugh to the quiet way you listen, you make every day brighter.\n\nI hope the year ahead brings you as much joy and light as you bring to everyone around you. May all your dreams take flight.");
-          const [wishMessage, setWishMessage] = useState("May the next year bring you all the love...");
-          const [finalMessage, setFinalMessage] = useState("Happy Birthday! ❤️");
+          const [galleryTitle, setGalleryTitle] = useState(initialData?.galleryTitle || "A Gallery of Memories");
+          const [photos, setPhotos] = useState(initialData?.photos || defaultPhotos);
+          const [videos, setVideos] = useState(initialData?.videos?.map(v => ({ url: reconstructUrl(v, 'video'), caption: v.caption })) || defaultVideos);
+          const [playlist, setPlaylist] = useState(initialData?.playlist?.map(s => ({ url: reconstructUrl(s, 'youtube'), title: s.title })) || defaultPlaylist);
+          const [galleryClosing, setGalleryClosing] = useState(initialData?.galleryClosing || "Every moment with you feels like a scene...");
+          const [letter, setLetter] = useState(initialData?.letter || "My Dearest Beautiful,\n\nOn your special day, I find myself reflecting on all the moments we've shared, big and small. Each one is a treasure, a testament to the incredible person you are. From your infectious laugh to the quiet way you listen, you make every day brighter.\n\nI hope the year ahead brings you as much joy and light as you bring to everyone around you. May all your dreams take flight.");
+          const [wishMessage, setWishMessage] = useState(initialData?.wishMessage || "May the next year bring you all the love...");
+          const [wishDescription, setWishDescription] = useState(initialData?.wishDescription || "This is a space to send your hopes and dreams out into the universe. What are you wishing for on this special day?");
+          const [finalMessage, setFinalMessage] = useState(initialData?.finalMessage || "Happy Birthday! ❤️");
           const [isLoading, setIsLoading] = useState(false);
           const [error, setError] = useState('');
 
           const getYouTubeId = (url) => {
               const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
               const match = url.match(regExp);
-              return (match && match[2].length === 11) ? match[2] : null;
+              return (match && match[2].length === 11) ? { type: 'youtube', id: match[2] } : null;
+          };
+
+          const processVideoUrl = (url) => {
+              if (url.startsWith('data:video/')) return { type: 'data', url: url };
+              const ytMatch = getYouTubeId(url);
+              if (ytMatch) return ytMatch;
+              const gdRegExp = /drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/;
+              const gdMatch = url.match(gdRegExp);
+              if (gdMatch) return { type: 'googledrive', id: gdMatch[1] };
+              return null;
           };
 
           const handleAddPhoto = () => setPhotos([...photos, { url: '', caption: '' }]);
           const handlePhotoChange = (index, field, value) => setPhotos(photos.map((p, i) => i === index ? { ...p, [field]: value } : p));
           const handleRemovePhoto = (index) => setPhotos(photos.filter((_, i) => i !== index));
+          const handlePhotoFileChange = (index, e) => {
+              const file = e.target.files[0];
+              if (file && file.type.startsWith('image/')) {
+                  const reader = new FileReader();
+                  reader.onload = (upload) => handlePhotoChange(index, 'url', upload.target.result);
+                  reader.readAsDataURL(file);
+              }
+          };
+          
+          const handleAddVideo = () => setVideos([...videos, { url: '', caption: '' }]);
+          const handleVideoChange = (index, field, value) => setVideos(videos.map((v, i) => i === index ? { ...v, [field]: value } : v));
+          const handleRemoveVideo = (index) => setVideos(videos.filter((_, i) => i !== index));
+          const handleVideoFileChange = (index, e) => {
+              const file = e.target.files[0];
+              if (file && file.type.startsWith('video/')) {
+                  if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                      setError('Video file is too large. Please keep it under 5MB or use a YouTube/Google Drive link.');
+                      return;
+                  }
+                  setError('');
+                  const reader = new FileReader();
+                  reader.onload = (upload) => handleVideoChange(index, 'url', upload.target.result);
+                  reader.readAsDataURL(file);
+              }
+          };
 
           const handleAddBentoItem = () => setBentoItems([...bentoItems, { icon: '💖', title: '', text: '' }]);
           const handleBentoItemChange = (index, field, value) => setBentoItems(bentoItems.map((item, i) => i === index ? { ...item, [field]: value } : item));
@@ -273,41 +339,30 @@
           };
 
           const getGoogleDriveImageUrl = (url) => {
-              let fileId = null;
-              // Regex for standard share links: https://drive.google.com/file/d/FILE_ID/view?usp=sharing
-              const regex1 = /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/;
-              const match1 = url.match(regex1);
-              if (match1) {
-                  fileId = match1[1];
-              } else {
-                  // Regex for older share links: https://drive.google.com/open?id=FILE_ID
-                  const regex2 = /drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/;
-                  const match2 = url.match(regex2);
-                  if (match2) {
-                      fileId = match2[1];
-                  }
-              }
-
-              if (fileId) {
-                  return `https://drive.google.com/uc?export=view&id=${fileId}`;
-              }
-              return url; // Return original URL if it's not a Google Drive link or already a direct link
+              if (url.startsWith('data:')) return url;
+              const gdRegExp = /drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/;
+              const match = url.match(gdRegExp);
+              if (match) return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+              return url;
           };
 
           const handleSubmit = (e) => {
               e.preventDefault();
               setError('');
-              const playlistWithIds = playlist.map(song => ({...song, youtubeId: getYouTubeId(song.url)}));
-              if (playlistWithIds.some(song => !song.youtubeId)) {
+              const playlistWithIds = playlist.map(song => ({ ...song, ...getYouTubeId(song.url) }));
+              if (playlistWithIds.some(song => !song.id)) {
                   setError('Please enter a valid YouTube URL for all songs in the playlist.');
                   return;
               }
-              
-              const processedPhotos = photos.map(photo => ({
-                  ...photo,
-                  url: getGoogleDriveImageUrl(photo.url)
-              }));
 
+              const videosWithData = videos.map(video => ({ ...video, processed: processVideoUrl(video.url) }));
+              if (videosWithData.some(video => !video.processed)) {
+                  setError('Please enter a valid YouTube/Google Drive URL for all videos, or upload a small video file.');
+                  return;
+              }
+              const finalVideos = videosWithData.map(v => ({ caption: v.caption, ...v.processed }));
+              
+              const processedPhotos = photos.map(photo => ({ ...photo, url: getGoogleDriveImageUrl(photo.url) }));
               if (processedPhotos.some(p => !p.url || !p.caption)) {
                   setError('Please ensure all photo fields are filled out.');
                   return;
@@ -317,7 +372,7 @@
                   setError('Please ensure all "Adore About You" fields are filled out.');
                   return;
               }
-              onSubmit({ recipientName, welcomeMessage, birthdayMessage, bentoItems, galleryTitle, photos: processedPhotos, galleryClosing, wishMessage, finalMessage, playlist: playlistWithIds, letter });
+              onSubmit({ recipientName, welcomeMessage, birthdayMessage, bentoItems, galleryTitle, photos: processedPhotos, videos: finalVideos, galleryClosing, wishMessage, wishDescription, finalMessage, playlist: playlistWithIds.map(({title, type, id}) => ({title, type, id})), letter });
           };
 
           const inputStyles = "w-full bg-slate-800/50 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-400 focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-300 shadow-lg";
@@ -325,10 +380,7 @@
 
           return (
               <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 text-slate-200">
-                  <div id="aurora-bg">
-                      <div className="aurora-blur aurora-1 top-[10%] left-[15%]"></div><div className="aurora-blur aurora-2 top-[60%] left-[30%]"></div>
-                      <div className="aurora-blur aurora-3 top-[40%] left-[70%]"></div><div className="aurora-blur aurora-4 top-[80%] left-[5%]"></div>
-                  </div>
+                  <div id="aurora-bg"><div className="aurora-blur aurora-1"></div><div className="aurora-blur aurora-2"></div><div className="aurora-blur aurora-3"></div><div className="aurora-blur aurora-4"></div></div>
                   <form onSubmit={handleSubmit} className="w-full max-w-3xl mx-auto card p-8 space-y-6 my-16">
                       <div className="text-center">
                           <h1 className="text-4xl font-display text-gradient">Birthday Site Generator</h1>
@@ -368,26 +420,50 @@
                       </details>
                       <details className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
                           <summary className="font-bold text-lg text-white cursor-pointer">Step 4: Customize Photo Gallery</summary>
-                          <p className="text-sm text-slate-400 mt-2">You can use direct image URLs or Google Drive share links for photos.</p>
+                          <p className="text-sm text-slate-400 mt-2">You can upload your own photos, or use direct image URLs / Google Drive share links.</p>
                           <div className="space-y-4 mt-4">
                               {photos.map((photo, index) => (
-                                  <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] items-end gap-4">
-                                      <div><label className={labelStyles}>Photo #{index + 1} URL</label><input type="url" value={photo.url} onChange={e => handlePhotoChange(index, 'url', e.target.value)} className={inputStyles} placeholder="https://..." /></div>
-                                      <div><label className={labelStyles}>Caption</label><input type="text" value={photo.caption} onChange={e => handlePhotoChange(index, 'caption', e.target.value)} className={inputStyles} placeholder="A short caption" /></div>
-                                      <button type="button" onClick={() => handleRemovePhoto(index)} className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-3 rounded-lg h-12 w-full md:w-auto">-</button>
+                                  <div key={index} className="p-4 rounded-lg bg-slate-800/50 border border-slate-700 flex items-start gap-4">
+                                      <img src={photo.url || 'https://via.placeholder.com/150/111827/808080?Text=No+Image'} alt="Preview" className="w-24 h-24 object-cover rounded-lg flex-shrink-0" />
+                                      <div className="flex-grow space-y-3">
+                                          <div className="flex items-end gap-2">
+                                              <div className="flex-grow"><label htmlFor={`photo-url-${index}`} className={labelStyles}>Photo #{index + 1} URL</label><input id={`photo-url-${index}`} type="text" value={photo.url.startsWith('data:') ? '' : photo.url} onChange={e => handlePhotoChange(index, 'url', e.target.value)} className={inputStyles} placeholder={photo.url.startsWith('data:') ? 'Custom image uploaded' : 'Paste URL or Upload'} /></div>
+                                              <input type="file" id={`file-upload-${index}`} accept="image/*" onChange={(e) => handlePhotoFileChange(index, e)} className="hidden" /><label htmlFor={`file-upload-${index}`} className="flex-shrink-0 h-12 text-center cursor-pointer bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300">Upload</label>
+                                          </div>
+                                          <div className="flex items-center gap-2"><label htmlFor={`photo-caption-${index}`} className="sr-only">Caption</label><input id={`photo-caption-${index}`} type="text" value={photo.caption} onChange={e => handlePhotoChange(index, 'caption', e.target.value)} className={inputStyles} placeholder="A short caption" /><button type="button" onClick={() => handleRemovePhoto(index)} className="bg-red-600 hover:bg-red-700 text-white font-bold p-3 rounded-lg h-12 w-12 flex-shrink-0">-</button></div>
+                                      </div>
                                   </div>
                               ))}
                           </div>
                           <button type="button" onClick={handleAddPhoto} className="w-full mt-4 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300">+</button>
                       </details>
+                       <details className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                          <summary className="font-bold text-lg text-white cursor-pointer">Step 5: Customize Video Messages</summary>
+                          <p className="text-sm text-slate-400 mt-2">Upload short videos (&lt; 5MB) or use YouTube/Google Drive links.</p>
+                          <div className="space-y-4 mt-4">
+                              {videos.map((video, index) => (
+                                  <div key={index} className="p-4 rounded-lg bg-slate-800/50 border border-slate-700 flex items-start gap-4">
+                                      <video src={video.url.startsWith('data:video') ? video.url : ''} controls className="w-24 h-24 object-cover rounded-lg flex-shrink-0 bg-slate-900" />
+                                      <div className="flex-grow space-y-3">
+                                          <div className="flex items-end gap-2">
+                                              <div className="flex-grow"><label htmlFor={`video-url-${index}`} className={labelStyles}>Video #{index + 1} URL</label><input id={`video-url-${index}`} type="text" value={video.url.startsWith('data:') ? '' : video.url} onChange={e => handleVideoChange(index, 'url', e.target.value)} className={inputStyles} placeholder={video.url.startsWith('data:') ? 'Custom video uploaded' : 'Paste URL or Upload'} /></div>
+                                              <input type="file" id={`video-file-upload-${index}`} accept="video/*" onChange={(e) => handleVideoFileChange(index, e)} className="hidden" /><label htmlFor={`video-file-upload-${index}`} className="flex-shrink-0 h-12 text-center cursor-pointer bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300">Upload</label>
+                                          </div>
+                                          <div className="flex items-center gap-2"><label htmlFor={`video-caption-${index}`} className="sr-only">Caption</label><input id={`video-caption-${index}`} type="text" value={video.caption} onChange={e => handleVideoChange(index, 'caption', e.target.value)} className={inputStyles} placeholder="A short caption" /><button type="button" onClick={() => handleRemoveVideo(index)} className="bg-red-600 hover:bg-red-700 text-white font-bold p-3 rounded-lg h-12 w-12 flex-shrink-0">-</button></div>
+                                      </div>
+                                  </div>
+                              ))}
+                          </div>
+                          <button type="button" onClick={handleAddVideo} className="w-full mt-4 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300">+</button>
+                      </details>
                       <details className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
-                          <summary className="font-bold text-lg text-white cursor-pointer">Step 5: Customize The Letter</summary>
+                          <summary className="font-bold text-lg text-white cursor-pointer">Step 6: Customize The Letter</summary>
                           <div className="space-y-4 mt-4">
                               <div><label className={labelStyles}>Your Letter</label><textarea value={letter} onChange={e => setLetter(e.target.value)} className={`${inputStyles} h-48`} /></div>
                           </div>
                       </details>
                       <details className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
-                          <summary className="font-bold text-lg text-white cursor-pointer">Step 6: Customize Playlist</summary>
+                          <summary className="font-bold text-lg text-white cursor-pointer">Step 7: Customize Playlist</summary>
                           <div className="space-y-4 mt-4">
                               {playlist.map((song, index) => (
                                   <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] items-end gap-4">
@@ -398,6 +474,15 @@
                               ))}
                           </div>
                           <button type="button" onClick={handleAddSong} className="w-full mt-4 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300">+</button>
+                      </details>
+                      <details className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                        <summary className="font-bold text-lg text-white cursor-pointer">Step 8: Customize Wish Page</summary>
+                        <div className="space-y-4 mt-4">
+                            <div>
+                                <label className={labelStyles}>Wish Page Description</label>
+                                <textarea value={wishDescription} onChange={e => setWishDescription(e.target.value)} className={`${inputStyles} h-24`} />
+                            </div>
+                        </div>
                       </details>
                       {error && <div className="bg-red-900/50 text-red-300 p-3 rounded-lg text-center">{error}</div>}
                       <button type="submit" className="w-full btn-primary text-white font-bold py-4 px-4 rounded-lg text-xl">
@@ -412,6 +497,8 @@
       const BirthdayWebsite = ({ config, onStartOver }) => {
           const canvasRef = useRef(null);
           const objectsRef = useRef([]);
+          const sceneRef = useRef(null);
+          const starsRef = useRef(null);
           const animationFrameId = useRef(null);
           const [currentStep, setCurrentStep] = useState(1);
           const [isMusicPlaying, setIsMusicPlaying] = useState(false);
@@ -421,7 +508,10 @@
           const [wishes, setWishes] = useState([]);
           const [newWish, setNewWish] = useState('');
           const [copySuccess, setCopySuccess] = useState('');
-          const TOTAL_STEPS = 8;
+          const [isWishLaunched, setIsWishLaunched] = useState(false);
+          const [launchedWishText, setLaunchedWishText] = useState('');
+
+          const TOTAL_STEPS = 9;
           
           useEffect(() => {
             const storedWishes = localStorage.getItem(`birthdayWishes_${config.recipientName}`);
@@ -456,7 +546,7 @@
           useEffect(() => {
               const initPlayer = () => {
                   if (playerRef.current) playerRef.current.destroy();
-                  const firstVideoId = config.playlist?.[0]?.youtubeId;
+                  const firstVideoId = config.playlist?.find(p => p.type === 'youtube')?.id;
                   if (!firstVideoId) return;
 
                   playerRef.current = new window.YT.Player('youtube-player', {
@@ -475,48 +565,71 @@
 
               const canvas = canvasRef.current;
               if (!canvas) return;
-              const scene = new THREE.Scene();
+              sceneRef.current = new THREE.Scene();
               const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
               camera.position.z = 5;
               const renderer = new THREE.WebGLRenderer({ canvas, alpha: true });
               renderer.setSize(window.innerWidth, window.innerHeight);
               renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-              scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+              sceneRef.current.add(new THREE.AmbientLight(0xffffff, 1.5));
               const dirLight = new THREE.DirectionalLight(0xffffff, 2);
               dirLight.position.set(5, 5, 5);
-              scene.add(dirLight);
+              sceneRef.current.add(dirLight);
               
               const heartShape = new THREE.Shape().moveTo(25, 25).bezierCurveTo(25, 25, 20, 0, 0, 0).bezierCurveTo(-30, 0, -30, 35, -30, 35).bezierCurveTo(-30, 55, -10, 77, 25, 95).bezierCurveTo(60, 77, 80, 55, 80, 35).bezierCurveTo(80, 35, 80, 0, 50, 0).bezierCurveTo(35, 0, 25, 25, 25, 25);
               const heartGeom = new THREE.ExtrudeGeometry(heartShape, { depth: 8, bevelEnabled: true, bevelSegments: 2, steps: 2, bevelSize: 1, bevelThickness: 1 }).scale(0.02, 0.02, 0.02).center();
               const heartMaterial = new THREE.MeshStandardMaterial({ color: 0xec4899, roughness: 0.3, metalness: 0.6, transparent: true });
               
               objectsRef.current = [];
-              for (let i = 0; i < 25; i++) {
+              for (let i = 0; i < 30; i++) {
                   const x = (Math.random() - 0.5) * 20; const y = (Math.random() - 0.5) * 20; const z = (Math.random() - 0.5) * 10;
                   const userData = { sinOffset: Math.random() * Math.PI * 2, speed: Math.random() * 0.3 + 0.1, initialPosition: new THREE.Vector3(x, y, z) };
                   let obj;
+                  const rand = Math.random();
 
-                  if (Math.random() > 0.4) {
-                      obj = new THREE.Mesh(heartGeom, heartMaterial.clone()); userData.isGift = false;
-                  } else {
+                  if (rand < 0.33) { // Heart
+                      obj = new THREE.Mesh(heartGeom, heartMaterial.clone());
+                  } else if (rand < 0.66) { // Gift
                       const giftGroup = new THREE.Group();
-                      const giftColors = [0xa78bfa, 0x7dd3fc, 0x60a5fa]; const ribbonColor = 0xf1f5f9;
+                      const giftColors = [0xa78bfa, 0x7dd3fc, 0x60a5fa, 0xfde047]; const ribbonColor = 0xf1f5f9;
                       const boxMaterial = new THREE.MeshStandardMaterial({ color: giftColors[Math.floor(Math.random() * giftColors.length)], roughness: 0.3, metalness: 0.6, transparent: true });
                       const ribbonMaterial = new THREE.MeshStandardMaterial({ color: ribbonColor, roughness: 0.3, metalness: 0.6, transparent: true });
                       const boxMesh = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.5), boxMaterial);
                       const ribbon1Mesh = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.3, 1.6), ribbonMaterial);
                       const ribbon2Mesh = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.6, 1.6), ribbonMaterial);
-                      giftGroup.add(boxMesh, ribbon1Mesh, ribbon2Mesh); obj = giftGroup; userData.isGift = true;
+                      giftGroup.add(boxMesh, ribbon1Mesh, ribbon2Mesh); obj = giftGroup; obj.isGroup = true;
+                  } else { // Candle
+                      const candleGroup = new THREE.Group();
+                      const candleMaterial = new THREE.MeshStandardMaterial({ color: 0xfff7d4, roughness: 0.4, metalness: 0.2, transparent: true });
+                      const wickMaterial = new THREE.MeshStandardMaterial({ color: 0x444444, transparent: true });
+                      const flameMaterial = new THREE.MeshBasicMaterial({ color: 0xffaa33, transparent: true });
+                      const candleGeom = new THREE.CylinderGeometry(0.3, 0.3, 2, 8);
+                      const wickGeom = new THREE.CylinderGeometry(0.05, 0.05, 0.2, 6);
+                      const flameGeom = new THREE.SphereGeometry(0.15, 8, 8);
+                      const candleMesh = new THREE.Mesh(candleGeom, candleMaterial);
+                      const wickMesh = new THREE.Mesh(wickGeom, wickMaterial); wickMesh.position.y = 1.1;
+                      const flameMesh = new THREE.Mesh(flameGeom, flameMaterial); flameMesh.position.y = 1.3;
+                      const flameLight = new THREE.PointLight(0xffaa33, 5, 5); flameLight.position.y = 1.5;
+                      candleGroup.add(candleMesh, wickMesh, flameMesh, flameLight); obj = candleGroup; obj.isGroup = true;
                   }
+
                   obj.position.set(x, y, z); obj.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-                  obj.scale.setScalar(Math.random() * 0.5 + 0.3); obj.userData = userData; scene.add(obj); objectsRef.current.push(obj);
+                  obj.scale.setScalar(Math.random() * 0.5 + 0.3); obj.userData = userData; sceneRef.current.add(obj); objectsRef.current.push(obj);
               }
 
               const animate = () => {
                   animationFrameId.current = requestAnimationFrame(animate);
                   const time = Date.now() * 0.0005;
-                  objectsRef.current.forEach(obj => { obj.rotation.y += Math.sin(time * obj.userData.speed + obj.userData.sinOffset) * 0.01; });
-                  renderer.render(scene, camera);
+                  objectsRef.current.forEach(obj => { 
+                    obj.rotation.y += Math.sin(time * obj.userData.speed + obj.userData.sinOffset) * 0.01; 
+                    if (obj.isGroup) { // make flames flicker
+                        const flame = obj.children[2];
+                        if (flame && flame.material.color.getHex() === 0xffaa33) {
+                            flame.scale.y = 1 + Math.sin(time * 20) * 0.1;
+                        }
+                    }
+                  });
+                  renderer.render(sceneRef.current, camera);
               };
               animate();
               const handleResize = () => {
@@ -533,12 +646,12 @@
           
           const handlePlaySong = (index) => {
               if (!isPlayerReady || !playerRef.current) return;
-              if (index === currentSongIndex) { // Toggle play/pause for the current song
+              if (index === currentSongIndex) {
                   const playerState = playerRef.current.getPlayerState();
                   if (playerState === 1) playerRef.current.pauseVideo();
                   else playerRef.current.playVideo();
-              } else { // Play a new song
-                  const videoId = config.playlist[index].youtubeId;
+              } else {
+                  const videoId = config.playlist[index].id;
                   playerRef.current.loadVideoById(videoId);
                   setCurrentSongIndex(index);
               }
@@ -568,30 +681,133 @@
                   .to(nextStepEl, { opacity: 1, scale: 1, duration: 0.6, ease: 'power3.out' }, ">-0.2");
               setCurrentStep(stepNumber);
           };
+          
+          const handleLaunchWish = () => {
+            const lastWish = wishes.length > 0 ? wishes[wishes.length - 1] : "For all your dreams to come true.";
+            setLaunchedWishText(lastWish);
+            setIsWishLaunched(true);
 
-          const handleGoHome = () => {
-              objectsRef.current.forEach(obj => {
-                  gsap.killTweensOf(obj.position);
-                  gsap.to(obj.position, { x: obj.userData.initialPosition.x, y: obj.userData.initialPosition.y, z: obj.userData.initialPosition.z, duration: 1, ease: 'power2.out' });
-                  if (obj.userData.isGift) { obj.children.forEach(child => { gsap.killTweensOf(child.material); gsap.to(child.material, { opacity: 1, duration: 1 }); });
-                  } else { gsap.killTweensOf(obj.material); gsap.to(obj.material, { opacity: 1, duration: 1 }); }
-              });
-              goToStep(1);
+            const scene = sceneRef.current;
+            if (!scene) return;
+
+            objectsRef.current.forEach(obj => {
+                gsap.to(obj.position, {
+                    x: (Math.random() - 0.5) * 30, y: (Math.random() - 0.5) * 30, z: Math.random() * -20,
+                    duration: 2.5, ease: 'power3.in'
+                });
+
+                if (obj.isGroup) {
+                    obj.children.forEach(child => {
+                        if (child.material) gsap.to(child.material, { opacity: 0, duration: 2.5, ease: 'power3.in' });
+                        if (child.isLight) gsap.to(child, { intensity: 0, duration: 2.5, ease: 'power3.in' });
+                    });
+                } else {
+                    gsap.to(obj.material, { opacity: 0, duration: 2.5, ease: 'power3.in' });
+                }
+            });
+
+            if (starsRef.current) scene.remove(starsRef.current);
+            const starVertices = [];
+            for (let i = 0; i < 10000; i++) {
+                starVertices.push((Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200);
+            }
+            const starGeometry = new THREE.BufferGeometry();
+            starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+            const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1, transparent: true, opacity: 0 });
+            starsRef.current = new THREE.Points(starGeometry, starMaterial);
+            scene.add(starsRef.current);
+
+            const tl = gsap.timeline();
+            tl.to('#wish-list-ui', { opacity: 0, duration: 1, ease: 'power2.in' })
+              .to(starsRef.current.material, { opacity: 1, duration: 3, ease: 'power2.out' }, "-=0.5")
+              .fromTo('#launched-wish-text', { opacity: 0, scale: 0.5, y: 0 }, { opacity: 1, scale: 1.2, y: -50, duration: 3, ease: 'back.out(1.7)' }, "-=2.5")
+              .to('#launched-wish-text', { opacity: 0, scale: 0.1, y: -200, duration: 2, ease: 'power3.in' }, "+=1")
+              .fromTo('#wish-sent-confirmation', { opacity: 0 }, { opacity: 1, duration: 1.5 }, ">-0.5");
           };
 
           const handleCelebration = () => {
-              const duration = 5 * 1000, end = Date.now() + duration;
+              const end = Date.now() + (5 * 1000);
+              const colors = ['#ec4899', '#f87171', '#a78bfa', '#ffffff'];
+
               (function frame() {
-                  confetti({ particleCount: 2, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#ec4899', '#f87171', '#a78bfa', '#ffffff'] });
-                  confetti({ particleCount: 2, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#ec4899', '#f87171', '#a78bfa', '#ffffff'] });
-                  if (Date.now() < end) requestAnimationFrame(frame);
+                  confetti({
+                      particleCount: 2,
+                      angle: 60,
+                      spread: 55,
+                      origin: { x: 0 },
+                      colors: colors
+                  });
+                   confetti({
+                      particleCount: 2,
+                      angle: 120,
+                      spread: 55,
+                      origin: { x: 1 },
+                      colors: colors
+                  });
+                  
+                  if (Date.now() < end) {
+                      requestAnimationFrame(frame);
+                  }
               }());
               
+              const duration = 5 * 1000;
+              const animationEnd = Date.now() + duration;
+              let skew = 1;
+              function randomInRange(min, max) { return Math.random() * (max - min) + min; }
+              
+              (function frame() {
+                const timeLeft = animationEnd - Date.now();
+                const ticks = Math.max(200, 500 * (timeLeft / duration));
+                skew = Math.max(0.8, skew - 0.001);
+
+                confetti({
+                  particleCount: 1,
+                  startVelocity: 0,
+                  ticks: ticks,
+                  origin: {
+                    x: Math.random(),
+                    y: (Math.random() * skew) - 0.2
+                  },
+                  colors: colors,
+                  shapes: ['circle'],
+                  gravity: randomInRange(0.4, 0.6),
+                  scalar: randomInRange(0.4, 1),
+                  drift: randomInRange(-0.4, 0.4)
+                });
+
+                if (timeLeft > 0) {
+                  requestAnimationFrame(frame);
+                }
+              }());
+          };
+
+          const handleGoHome = () => {
+              setIsWishLaunched(false);
+              if (sceneRef.current && starsRef.current) {
+                sceneRef.current.remove(starsRef.current);
+                starsRef.current = null;
+              }
               objectsRef.current.forEach(obj => {
-                  gsap.to(obj.position, { y: obj.position.y + (Math.random() > 0.5 ? 15 : -15), x: obj.position.x + (Math.random() > 0.5 ? 15 : -15), z: 10, duration: 5, ease: 'power2.in' });
-                  if (obj.userData.isGift) { obj.children.forEach(child => { gsap.to(child.material, { opacity: 0, duration: 5, ease: 'power2.in' }); });
-                  } else { gsap.to(obj.material, { opacity: 0, duration: 5, ease: 'power2.in' }); }
+                  gsap.killTweensOf(obj.position);
+                  gsap.to(obj.position, { x: obj.userData.initialPosition.x, y: obj.userData.initialPosition.y, z: obj.userData.initialPosition.z, duration: 1, ease: 'power2.out' });
+                  
+                  if (obj.isGroup) {
+                    obj.children.forEach(child => {
+                        if (child.material) {
+                            gsap.killTweensOf(child.material);
+                            gsap.to(child.material, { opacity: 1, duration: 1 });
+                        }
+                        if (child.isLight) {
+                            gsap.killTweensOf(child);
+                            gsap.to(child, { intensity: 5, duration: 1 });
+                        }
+                    });
+                  } else {
+                     gsap.killTweensOf(obj.material);
+                     gsap.to(obj.material, { opacity: 1, duration: 1 });
+                  }
               });
+              goToStep(1);
           };
 
           useEffect(() => {
@@ -606,15 +822,25 @@
 
           const cardStyles = "step absolute inset-0 m-auto w-full card p-6 md:p-8 flex flex-col items-center justify-start gap-4 text-center max-h-[90vh] overflow-y-auto pt-20 pb-8";
 
+          const VideoPlayer = ({ video }) => {
+              if (video.type === 'data') {
+                  return <div className="aspect-video-container bg-black rounded-lg overflow-hidden shadow-lg"><video src={video.url} controls className="w-full h-full" /></div>;
+              }
+              const embedUrl = video.type === 'youtube'
+                  ? `https://www.youtube.com/embed/${video.id}`
+                  : `https://drive.google.com/file/d/${video.id}/preview`;
+              return <div className="aspect-video-container bg-black rounded-lg overflow-hidden shadow-lg"><iframe src={embedUrl} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title={video.caption}></iframe></div>;
+          };
+
           return (
               <div className="w-full h-screen overflow-hidden">
-                  <div id="aurora-bg"><div className="aurora-blur aurora-1 top-[10%] left-[15%]"></div><div className="aurora-blur aurora-2 top-[60%] left-[30%]"></div><div className="aurora-blur aurora-3 top-[40%] left-[70%]"></div><div className="aurora-blur aurora-4 top-[80%] left-[5%]"></div></div>
+                  <div id="aurora-bg"><div className="aurora-blur aurora-1"></div><div className="aurora-blur aurora-2"></div><div className="aurora-blur aurora-3"></div><div className="aurora-blur aurora-4"></div></div>
                   <canvas ref={canvasRef} id="three-canvas" className="fixed top-0 left-0 w-full h-full -z-10"></canvas>
                   <main className="relative z-10 w-full h-screen flex flex-col items-center justify-center p-4">
                       <div className="fixed top-5 w-11/12 max-w-md h-2.5 rounded-full p-0.5 bg-slate-900/30 backdrop-blur-sm"><div className="h-1.5 rounded-full bg-gradient-to-r from-pink-500 to-red-500 transition-all duration-500" style={{ width: `${((currentStep - 1) / (TOTAL_STEPS - 1)) * 100}%` }}></div></div>
                       <div className="fixed top-12 left-5 z-20 flex gap-2">
                           <button onClick={handleGoHome} title="Home" className="w-12 h-12 rounded-full flex items-center justify-center text-white bg-slate-800/70 backdrop-blur-sm border border-slate-600 hover:bg-slate-700/70 transition-colors"><i className="fas fa-home"></i></button>
-                          <button onClick={onStartOver} title="Create Another Wish" className="w-12 h-12 rounded-full flex items-center justify-center text-white bg-slate-800/70 backdrop-blur-sm border border-slate-600 hover:bg-slate-700/70 transition-colors"><i className="fas fa-plus"></i></button>
+                          <button onClick={onStartOver} title="Edit This Wish" className="w-12 h-12 rounded-full flex items-center justify-center text-white bg-slate-800/70 backdrop-blur-sm border border-slate-600 hover:bg-slate-700/70 transition-colors"><i className="fas fa-edit"></i></button>
                       </div>
                       <button onClick={toggleMusic} title="Toggle Music" className="fixed top-12 right-5 z-20 w-12 h-12 rounded-full flex items-center justify-center text-white bg-slate-800/70 backdrop-blur-sm border border-slate-600 hover:bg-slate-700/70 transition-colors">
                           <i className={`fas ${isMusicPlaying ? 'fa-pause' : 'fa-play'}`}></i>
@@ -636,20 +862,23 @@
                           </div>
                           <div id="step-4" className={cardStyles} style={{ display: currentStep === 4 ? 'flex' : 'none' }}>
                               <h2 className="text-4xl font-display text-gradient text-center">{config.galleryTitle}</h2>
-                              <div id="photo-gallery-wrapper" className="w-full relative"><div className="photo-gallery flex gap-8 overflow-x-auto p-4 snap-x snap-mandatory scroll-smooth">{(config.photos || []).map((photo, i) => <figure key={i} className={`polaroid w-64 h-auto flex-shrink-0 snap-center`} style={{transform: `rotate(${(i%2===0? -1:1) * (2+i)}deg)`}}><img src={photo.url} alt={photo.caption} className="w-full h-auto object-cover" /><figcaption>{photo.caption}</figcaption></figure>)}</div></div>
+                              <div id="photo-gallery-wrapper" className="w-full relative"><div className="photo-gallery flex gap-8 overflow-x-auto p-4 snap-x snap-mandatory scroll-smooth">{(config.photos || []).map((photo, i) => <figure key={i} className={`polaroid w-64 h-auto flex-shrink-0 snap-center`} style={{transform: `rotate(${(i%2===0? -1:1) * (2+i)}deg)`}}><img src={photo.url} alt={photo.caption} className="w-full h-auto object-cover" /><figcaption className="font-display">{photo.caption}</figcaption></figure>)}</div></div>
                               <p className="text-center italic mt-4">{config.galleryClosing}</p>
-                              <button onClick={() => goToStep(5)} className="btn-primary rounded-full px-8 py-3 font-bold mt-4">Make a wish...</button>
+                              <button onClick={() => goToStep(5)} className="btn-primary rounded-full px-8 py-3 font-bold mt-4">Some messages for you...</button>
                           </div>
                           <div id="step-5" className={cardStyles} style={{ display: currentStep === 5 ? 'flex' : 'none' }}>
-                              <h2 className="text-4xl font-display text-gradient text-center">Your Birthday Wish List</h2>
-                              <div className="w-full max-w-md mx-auto mt-4">
-                                <div className="flex gap-2"><input type="text" value={newWish} onChange={(e) => setNewWish(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleAddWish()} placeholder="What are you wishing for?" className="flex-grow bg-slate-800/50 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-400 focus:ring-2 focus:ring-pink-500"/><button onClick={handleAddWish} className="bg-pink-600 hover:bg-pink-700 text-white font-bold p-3 rounded-lg">+</button></div>
-                                <ul className="mt-4 space-y-2 text-left">{wishes.map((wish, index) => (<li key={index} className="flex justify-between items-center bg-slate-800/50 p-3 rounded-lg"><span>{wish}</span><button onClick={() => handleRemoveWish(index)} className="text-red-400 hover:text-red-300">&times;</button></li>))}</ul>
-                                {wishes.length > 0 && <button onClick={handleCopyWishes} className="mt-4 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg">{copySuccess || 'Copy My Wishes'}</button>}
-                              </div>
-                             <button onClick={() => goToStep(6)} className="btn-primary rounded-full px-8 py-3 font-bold mt-6 self-center">A soundtrack for you</button>
-                          </div>
-                           <div id="step-6" className={cardStyles} style={{ display: currentStep === 6 ? 'flex' : 'none' }}>
+                                <h2 className="text-4xl font-display text-gradient text-center">Some Special Messages</h2>
+                                <div className="w-full flex gap-8 overflow-x-auto p-4 snap-x snap-mandatory scroll-smooth">
+                                    {(config.videos || []).map((video, i) => (
+                                        <div key={i} className="flex-shrink-0 snap-center w-full max-w-lg">
+                                            <VideoPlayer video={video} />
+                                            <p className="text-center italic mt-2">{video.caption}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                                <button onClick={() => goToStep(6)} className="btn-primary rounded-full px-8 py-3 font-bold mt-4">A soundtrack for you</button>
+                            </div>
+                            <div id="step-6" className={cardStyles} style={{ display: currentStep === 6 ? 'flex' : 'none' }}>
                                 <h2 className="text-4xl font-display text-gradient text-center">A Soundtrack For You</h2>
                                 <div className="w-full max-w-md mx-auto mt-4 space-y-2">
                                     {(config.playlist || []).map((song, index) => (
@@ -666,7 +895,7 @@
                                 </div>
                                 <button onClick={() => goToStep(7)} className="btn-primary rounded-full px-8 py-3 font-bold mt-6 self-center">Read my letter</button>
                             </div>
-                          <div id="step-7" className={cardStyles} style={{ display: currentStep === 7 ? 'flex' : 'none' }}>
+                           <div id="step-7" className={cardStyles} style={{ display: currentStep === 7 ? 'flex' : 'none' }}>
                               <h2 className="text-4xl font-display text-gradient text-center">A Letter For You</h2>
                               <div className="w-full text-left overflow-y-auto max-h-[50vh] prose prose-invert prose-p:text-slate-300 mt-4 px-4 whitespace-pre-wrap">{config.letter}</div>
                               <button onClick={() => goToStep(8)} className="btn-primary rounded-full px-8 py-3 font-bold mt-6 self-center">One last thing...</button>
@@ -676,7 +905,27 @@
                               <h1 className="text-5xl font-display text-gradient">My Wish For You</h1>
                               <p>{config.wishMessage}</p>
                               <div className="h-10 mt-4"><h2 className="text-3xl text-gradient font-display">{config.finalMessage}</h2></div>
-                              <button id="celebrate-btn" onClick={handleCelebration} className="btn-primary rounded-full px-8 py-3 font-bold">Celebrate!</button>
+                              <div className="flex flex-col sm:flex-row gap-4 mt-4">
+                                <button onClick={handleCelebration} className="btn-primary rounded-full px-8 py-3 font-bold">🎉 Celebrate! 🎉</button>
+                                <button onClick={() => goToStep(9)} className="btn-primary rounded-full px-8 py-3 font-bold">Make a Wish</button>
+                              </div>
+                          </div>
+                          <div id="step-9" className={cardStyles} style={{ display: currentStep === 9 ? 'flex' : 'none', justifyContent: 'center' }}>
+                              {!isWishLaunched ? (
+                                <div id="wish-list-ui" className="w-full max-w-md mx-auto transition-opacity duration-500">
+                                  <h2 className="text-4xl font-display text-gradient text-center">One Final Wish...</h2>
+                                  <p className="text-slate-400 mt-2 mb-4">{config.wishDescription}</p>
+                                  <div className="flex gap-2"><input type="text" value={newWish} onChange={(e) => setNewWish(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleAddWish()} placeholder="What are you wishing for?" className="flex-grow bg-slate-800/50 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-400 focus:ring-2 focus:ring-pink-500"/><button onClick={handleAddWish} className="bg-pink-600 hover:bg-pink-700 text-white font-bold p-3 rounded-lg">+</button></div>
+                                  <ul className="mt-4 space-y-2 text-left">{wishes.map((wish, index) => (<li key={index} className="flex justify-between items-center bg-slate-800/50 p-3 rounded-lg"><span>{wish}</span><button onClick={() => handleRemoveWish(index)} className="text-red-400 hover:text-red-300">&times;</button></li>))}</ul>
+                                  {wishes.length > 0 && <button onClick={handleCopyWishes} className="mt-4 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg">{copySuccess || 'Copy My Wishes'}</button>}
+                                  <button onClick={handleLaunchWish} className="w-full btn-primary rounded-full px-8 py-3 font-bold mt-6 self-center">Make a Wish & Launch!</button>
+                                </div>
+                               ) : (
+                                <div className="text-center">
+                                    <h2 id="launched-wish-text" className="text-4xl font-display text-gradient opacity-0" style={{ transform: 'scale(0.5)' }}>{launchedWishText}</h2>
+                                    <p id="wish-sent-confirmation" className="mt-4 text-xl opacity-0">Your wish is on its way to the stars...</p>
+                                </div>
+                               )}
                           </div>
                       </div>
                   </main>
@@ -702,28 +951,12 @@
 
           return (
               <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 text-slate-200">
-                  <div id="aurora-bg">
-                      <div className="aurora-blur aurora-1 top-[10%] left-[15%]"></div>
-                      <div className="aurora-blur aurora-2 top-[60%] left-[30%]"></div>
-                  </div>
+                  <div id="aurora-bg"><div className="aurora-blur aurora-1"></div><div className="aurora-blur aurora-2"></div></div>
                   <form onSubmit={handleSubmit} className="w-full max-w-sm mx-auto card p-8 space-y-6">
-                      <div className="text-center">
-                          <h1 className="text-3xl font-display text-gradient">Secret Name😎</h1>
-                      </div>
-                      <div>
-                          <input
-                              type="password"
-                              value={password}
-                              onChange={(e) => setPassword(e.target.value)}
-                              className="w-full bg-slate-800/50 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-400 focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-300 shadow-lg"
-                              placeholder="???🧐"
-                              autoFocus
-                          />
-                      </div>
+                      <div className="text-center"><h1 className="text-3xl font-display text-gradient">Secret Name😎</h1></div>
+                      <div><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-slate-800/50 border border-slate-700 rounded-lg p-3 text-white placeholder-slate-400 focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-300 shadow-lg" placeholder="???🧐" autoFocus /></div>
                       {error && <div className="bg-red-900/50 text-red-300 p-3 rounded-lg text-center">{error}</div>}
-                      <button type="submit" className="w-full btn-primary text-white font-bold py-3 px-4 rounded-lg text-lg">
-                          Unlock
-                      </button>
+                      <button type="submit" className="w-full btn-primary text-white font-bold py-3 px-4 rounded-lg text-lg">Unlock</button>
                   </form>
               </div>
           );
@@ -733,6 +966,7 @@
       const App = () => {
           const [isAuthenticated, setIsAuthenticated] = useState(false);
           const [config, setConfig] = useState(null);
+          const [initialFormData, setInitialFormData] = useState(null);
 
           useEffect(() => {
               if (!isAuthenticated) return;
@@ -767,12 +1001,14 @@
                   const safeStringForBtoA = unescape(encodeURIComponent(jsonString));
                   const encodedData = btoa(safeStringForBtoA);
                   window.location.hash = `data=${encodeURIComponent(encodedData)}`;
+                  setInitialFormData(null);
               } catch (e) {
                   console.error("Error creating shareable link:", e);
               }
           };
 
           const handleStartOver = () => {
+              setInitialFormData(config);
               window.location.hash = '';
           };
 
@@ -789,7 +1025,7 @@
           }
           return (
               <div className="w-full min-h-screen bg-[#0c0a09]">
-                  <SetupForm onSubmit={handleCreate} />
+                  <SetupForm onSubmit={handleCreate} initialData={initialFormData} />
               </div>
           );
       };
