@@ -24,7 +24,7 @@ const SetupForm: React.FC<SetupFormProps> = ({ onSubmit, initialData }) => {
     const [birthdayMessage, setBirthdayMessage] = useState(initialData?.birthdayMessage || "Another year of you making the world brighter.");
     const [bentoItems, setBentoItems] = useState<BentoItem[]>(initialData?.bentoItems || [{ icon: '✨', title: 'Your Radiant Spirit', text: 'Your passion for life is infectious.' }]);
     const [photos, setPhotos] = useState<Photo[]>(initialData?.photos || defaultPhotos);
-    const [videos, setVideos] = useState<Video[]>(initialData?.videos.map(v => ({ url: v.url || `https://www.youtube.com/watch?v=${v.id}`, caption: v.caption })) || defaultVideos);
+    const [videos, setVideos] = useState<Video[]>(initialData?.videos?.map(v => ({ url: v.url || `https://www.youtube.com/watch?v=${v.id}`, caption: v.caption })) || defaultVideos);
     const [playlist, setPlaylist] = useState<Song[]>(initialData?.playlist?.map(s => ({ url: `https://www.youtube.com/watch?v=${s.id}`, title: s.title })) || defaultPlaylist);
     const [letter, setLetter] = useState(initialData?.letter || "My Dearest,\n\nOn your special day, I find myself reflecting on all the moments we've shared...");
     const [wishMessage, setWishMessage] = useState(initialData?.wishMessage || "May the next year bring you all the love...");
@@ -74,12 +74,13 @@ const SetupForm: React.FC<SetupFormProps> = ({ onSubmit, initialData }) => {
         if (!file) return;
         const statusKey = `photo-${index}`;
         setUploadStatus(prev => ({ ...prev, [statusKey]: 'uploading' }));
+        setError('');
         try {
             const uploadedUrl = await uploadToCloudinary(file, cloudinaryCloudName, cloudinaryUploadPreset, cloudinaryFolder);
             handlePhotoChange(index, 'url', uploadedUrl);
             setUploadStatus(prev => ({ ...prev, [statusKey]: 'success' }));
-        } catch (err) {
-            setError('Photo upload failed. Please try again.');
+        } catch (err: any) {
+            setError(`Upload failed: ${err.message}`);
             setUploadStatus(prev => ({ ...prev, [statusKey]: 'error' }));
         }
     };
@@ -93,12 +94,13 @@ const SetupForm: React.FC<SetupFormProps> = ({ onSubmit, initialData }) => {
         if (!file) return;
         const statusKey = `video-${index}`;
         setUploadStatus(prev => ({ ...prev, [statusKey]: 'uploading' }));
+        setError('');
         try {
             const uploadedUrl = await uploadToCloudinary(file, cloudinaryCloudName, cloudinaryUploadPreset, cloudinaryFolder);
             handleVideoChange(index, 'url', uploadedUrl);
             setUploadStatus(prev => ({ ...prev, [statusKey]: 'success' }));
-        } catch (err) {
-            setError('Video upload failed. Please try again.');
+        } catch (err: any) {
+            setError(`Upload failed: ${err.message}`);
             setUploadStatus(prev => ({ ...prev, [statusKey]: 'error' }));
         }
     };
